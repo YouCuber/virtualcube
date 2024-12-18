@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rubik's Cube</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body>
+  <!-- CDN経由でThree.jsを読み込む -->
+  <script type="module">
+    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js';
+
+    // シーン、カメラ、レンダラーの作成
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // ルービックキューブの作成
+    const cubeGroup = new THREE.Group();
+    const cubeSize = 1.0;
+    const spacing = 0.1;
+    const colors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xffa500, 0xffffff];
+
+    for (let x = -1; x <= 1; x++) {
+      for (let y = -1; y <= 1; y++) {
+        for (let z = -1; z <= 1; z++) {
+          const geometry = new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize);
+          const materials = colors.map(color => new THREE.MeshBasicMaterial({ color }));
+          const cubelet = new THREE.Mesh(geometry, materials);
+          cubelet.position.set(x * (cubeSize + spacing), y * (cubeSize + spacing), z * (cubeSize + spacing));
+          cubeGroup.add(cubelet);
+        }
+      }
+    }
+
+    scene.add(cubeGroup);
+    camera.position.z = 5;
+
+    // アニメーションループ
+    function animate() {
+      requestAnimationFrame(animate);
+      renderer.render(scene, camera);
+    }
+    animate();
+  </script>
+</body>
+</html>
