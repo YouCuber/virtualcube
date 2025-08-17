@@ -1,0 +1,1 @@
+cd /home/rocky/virtualcube/www && sudo -E env "PATH=$PATH" http-server -p 80
