@@ -863,7 +863,7 @@ debugLog.style.top = '15%';    // 少し下げることで、アドレスバー�
 debugLog.style.left = '10px';
 debugLog.style.backgroundColor = 'red'; // 目立つ赤色にしたのだ
 debugLog.style.color = 'white';
-debugLog.style.fontSize = '18px'; // 文字を大きくしたのだ
+debugLog.style.fontSize = '14px'; // 読みやすいサイズ
 debugLog.style.padding = '5px';
 debugLog.style.zIndex = '100000';
 debugLog.style.pointerEvents = 'none';
@@ -872,44 +872,32 @@ document.body.appendChild(debugLog);
 function showDebug(msg) {
     debugLog.innerText = msg;
 }
+
+// イベントを待たず、0.5秒おきに強制的にサイズをチェックして数値を出すのだ
+setInterval(() => {
+    showDebug(`Live: ${window.innerWidth}x${window.innerHeight} | Ori: ${screen.orientation ? screen.orientation.type : 'N/A'}`);
+}, 500);
 // DEBUG End
 
-// ★ 修正箇所：Chromeのサイズ確定遅延をねじ伏せるためのループ処理
-window.addEventListener('resize', () => {
-    showDebug(`Resize start: ${window.innerWidth}x${window.innerHeight}`);
+// レイアウトを強制更新する関数
+function updateLayoutForce() {
+    const width = window.innerWidth;
+    const height = window.innerHeight;
 
-    // Chromeは回転アニメーション中、何度もサイズが変わるので、
-    // 0.2秒、0.5秒、1秒、2秒後の合計4回、しつこく再計算させるのだ！
-    const timings = [200, 500, 1000, 2000];
-    
-    timings.forEach(delay => {
-        setTimeout(() => {
-            const width = window.innerWidth;
-            const height = window.innerHeight;
-            
-            // 縦画面（height > width）の時だけ、レイアウトを強制更新するのだ
-            if (height > width) {
-                const cubeHeight = Math.floor(height * 0.4);
-                const buttonHeight = Math.floor(height * 0.6);
+    // 縦画面（height > width）の時だけ実行
+    if (height > width) {
+        const cubeHeight = Math.floor(height * 0.4);
+        
+        const canvasContainer = document.getElementById('canvasContainer');
+        const buttonContainer = document.getElementById('buttonContainer');
+        
+        // ★ 修正箇所：CSSのvhに頼らず、ピクセル単位で高さを強制上書きする
+        if (canvasContainer) canvasContainer.style.height = cubeHeight + "px";
+        if (buttonContainer) buttonContainer.style.height = (height - cubeHeight) + "px";
 
-                const canvasContainer = document.getElementById('canvasContainer');
-                const buttonContainer = document.getElementById('buttonContainer');
-                
-                if (canvasContainer) canvasContainer.style.height = cubeHeight + "px";
-                if (buttonContainer) buttonContainer.style.height = buttonHeight + "px";
-
-                renderer.setSize(width, cubeHeight);
-                camera.aspect = width / cubeHeight;
-                camera.updateProjectionMatrix();
-                renderer.render(scene, camera);
-
-                showDebug(`OK! ${width}x${height} | Cube: ${cubeHeight}`);
-            } else {
-                showDebug(`Landscape mode: ${width}x${height}`);
-            }
-        }, delay);
-    });
-});
-
-// 初期起動時も実行しておくのだ
-window.dispatchEvent(new Event('resize'));
+        renderer.setSize(width, cubeHeight);
+        camera.aspect = width / cubeHeight;
+        camera.updateProjectionMatrix();
+        renderer.render(scene, camera);
+    }
+}
