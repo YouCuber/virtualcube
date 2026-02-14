@@ -853,19 +853,50 @@ camera.position.z = 5;  // 例えばカメラを手前に配置
 
 animate(); // アニメーションを開始
 
+// ★ 修正箇所：カメラをデフォルト位置に戻すボタンのロジック
+const resetCameraButton = document.getElementById('resetCameraButton');
+if (resetCameraButton) {
+    resetCameraButton.addEventListener('click', () => {
+        // カメラの初期位置を設定した場所の値を再設定するのだ
+        camera.position.set(3.0, 2.5, 4.0); 
+        camera.lookAt(0, 0, 0);
+
+        // OrbitControls も初期位置に戻さないと、すぐにドラッグした位置に戻っちゃうのだ
+        controls.reset(); 
+
+        renderer.render(scene, camera); // 即座に画面を更新するのだ
+    });
+}
+
+// ★ 修正箇所：ウィンドウリサイズ時のカメラ調整
+window.addEventListener('resize', () => {
+    const width = window.innerWidth;
+    const height = window.innerHeight * 0.4;
+
+    renderer.setSize(width, height);
+    camera.aspect = width / height;
+    camera.updateProjectionMatrix();
+});
+
 // レイアウトを強制更新する関数
 function updateLayoutForce() {
     const width = window.innerWidth;
     const height = window.innerHeight;
+    const warning = document.getElementById('landscape-warning'); // 警告メッセージの要素
+    const canvasContainer = document.getElementById('canvasContainer');
+    const buttonContainer = document.getElementById('buttonContainer');
 
-    // 縦画面（height > width）の時だけ実行
-    if (height > width) {
+    // 縦画面と横画面で表示を切り替えるロジック
+    if (height > width) { // 縦画面の場合
+        // 警告メッセージを非表示にする
+        if (warning) warning.style.display = 'none';
+        // キューブとボタンを表示する
+        if (canvasContainer) canvasContainer.style.display = 'block';
+        if (buttonContainer) buttonContainer.style.display = 'flex';
+
         const cubeHeight = Math.floor(height * 0.4);
         
-        const canvasContainer = document.getElementById('canvasContainer');
-        const buttonContainer = document.getElementById('buttonContainer');
-        
-        // ★ 修正箇所：CSSのvhに頼らず、ピクセル単位で高さを強制上書きする
+        // CSSのvhに頼らず、ピクセル単位で高さを強制上書きする
         if (canvasContainer) canvasContainer.style.height = cubeHeight + "px";
         if (buttonContainer) buttonContainer.style.height = (height - cubeHeight) + "px";
 
@@ -873,5 +904,26 @@ function updateLayoutForce() {
         camera.aspect = width / cubeHeight;
         camera.updateProjectionMatrix();
         renderer.render(scene, camera);
+    } else { // 横画面の場合
+        // 警告メッセージを表示する
+        if (warning) warning.style.display = 'flex';
+        // キューブとボタンを非表示にする
+        if (canvasContainer) canvasContainer.style.display = 'none';
+        if (buttonContainer) buttonContainer.style.display = 'none';
     }
 }
+
+// レイアウト更新イベントリスナーを、関数の定義後にまとめて登録
+window.addEventListener('resize', updateLayoutForce);
+window.addEventListener('orientationchange', () => {
+    // 回転時はChromeのサイズ確定を待つため、しつこく実行
+    setTimeout(updateLayoutForce, 100);
+    setTimeout(updateLayoutForce, 500);
+    setTimeout(updateLayoutForce, 1000);
+});
+
+// 500ミリ秒ごとに常にチェックし続ける（これでChromeのズレをねじ伏せるのだ）
+setInterval(updateLayoutForce, 500);
+
+// 初期起動時も実行（これが動かないと初期表示もおかしいはずなのだ）
+updateLayoutForce();

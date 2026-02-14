@@ -13,7 +13,6 @@
       }
     </script>
     <style>
-        
         body {
             margin: 0;
             padding: 0;
@@ -28,30 +27,41 @@
 
         /* 上半分：キューブ */
         #canvasContainer {
-            height: 40vh;
+            height: 40vh; /* 高さ40% */
             width: 100%;
             background-color: #000;
         }
 
         /* 下半分：ボタン */
         #buttonContainer {
-            height: 60vh;
+            height: 60vh; /* 高さ60% */
             background-color: #111;
             display: flex;
             flex-direction: column;
-
-            /* ★ 修正箇所：均等配置ではなく「上詰め」に変更するのだ */
-            justify-content: flex-start; 
-            /* ★ 修正箇所：行ごとの隙間を固定で15px空けるのだ */
-            gap: 15px; 
-            /* ★ 修正箇所：左右のパディングはそのまま、下側にしっかり余白を作るのだ */
-            padding: 20px 10px 100px 10px; 
+            justify-content: flex-start; /* 上詰め */
+            gap: 15px; /* 行ごとの隙間 */
             
-            /* ★ 修正箇所：iPhoneなどの画面下の「棒」がある機種でも見切れないようにする設定なのだ */
-            padding-bottom: calc(100px + env(safe-area-inset-bottom));
+            padding: 20px 10px 100px 10px; /* 下にしっかり余白を作る */
+            padding-bottom: calc(100px + env(safe-area-inset-bottom)); /* iPhoneの安全エリア対応 */
 
             box-sizing: border-box;
             border-top: 2px solid #333;
+        }
+        #landscape-warning {
+            display: none; /* 初期状態は隠す（JSで制御する） */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.8); /* 背景を半透明の黒にするのだ */
+            color: #ffffff; /* 文字色を白にするのだ */
+            z-index: 999999; /* 何よりも上に表示するのだ */
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-size: 20px; /* 警告文の文字サイズ */
         }
 
         .buttonRow {
@@ -63,7 +73,7 @@
 
         button {
             flex: 1;
-            max-width: 80px;
+            max-width: 80px; /* ボタンの最大幅を固定 */
             font-size: 18px; /* ボタンが多い行に合わせて少しサイズ調整 */
             font-weight: bold;
             border: none;
@@ -90,41 +100,65 @@
         .btn-b { background-color: #1976d2; }
         .btn-d { background-color: #afb42b; }
         .btn-rot { background-color: #444; } /* ★ 修正箇所：全回転ボタン用の色 */
-
+        
+        .spacer {
+            flex: 1; /* 空いたスペースを埋める */
+            min-width: 80px; /* ボタンと同じくらいの幅を持たせる */
+            max-width: none; /* 必要以上に狭まらないように */
+        }
     </style>
 </head>
 <body>
-
+    <div id="landscape-warning">
+        <div style="font-size: 40px;">🔄</div>
+        <p>このアプリは縦画面専用なのだ！<br>画面を縦に戻してほしいのだ。</p>
+    </div>
+    
     <div id="canvasContainer"></div>
 
     <div id="buttonContainer">
         <!-- 1段目: U面 -->
         <div class="buttonRow">
+            <div class="spacer"></div> <!-- ★ spacerを追加 -->
+            <div class="spacer"></div> <!-- ★ spacerを追加 -->
             <button class="btn-u">U</button>
             <button class="btn-u">U'</button>
+            <div class="spacer"></div> <!-- ★ spacerを追加 -->
+            <button class="btn-rot" id="resetCameraButton">Reset Camera</button>
+            <div class="spacer"></div> <!-- ★ spacerを追加 -->
         </div>
 
         <!-- 2段目: 側面（正回転） -->
         <div class="buttonRow">
+            <div class="spacer"></div> <!-- ★ spacerを追加 -->
             <button class="btn-l">L</button>
+            <div class="spacer"></div> <!-- ★ spacerを追加 -->
             <button class="btn-f">F</button>
             <button class="btn-r">R</button>
             <button class="btn-b">B</button>
+            <div class="spacer"></div> <!-- ★ spacerを追加 -->
         </div>
 
         <!-- 3段目: 側面（逆回転） -->
         <div class="buttonRow">
+            <div class="spacer"></div> <!-- ★ spacerを追加 -->
             <button class="btn-l">L'</button>
-
+            <div class="spacer"></div> <!-- ★ spacerを追加 -->
             <button class="btn-f">F'</button>
             <button class="btn-r">R'</button>
             <button class="btn-b">B'</button>
+            <div class="spacer"></div> <!-- ★ spacerを追加 -->
         </div>
 
         <!-- 4段目: D面 -->
         <div class="buttonRow">
+            <div class="spacer"></div> <!-- ★ spacerを追加 -->
+            <div class="spacer"></div> <!-- ★ spacerを追加 -->
             <button class="btn-d">D</button>
             <button class="btn-d">D'</button>
+            <div class="spacer"></div> <!-- ★ spacerを追加 -->
+            <div class="spacer"></div> <!-- ★ spacerを追加 -->
+            <div class="spacer"></div> <!-- ★ spacerを追加 -->
         </div>
 
         <!-- 5段目: 全回転（X, Y, Z） -->
