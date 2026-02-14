@@ -923,7 +923,7 @@ window.addEventListener('orientationchange', () => {
 });
 
 // 500ミリ秒ごとに常にチェックし続ける（これでChromeのズレをねじ伏せるのだ）
-setInterval(updateLayoutForce, 500);
+//setInterval(updateLayoutForce, 500);
 
 // 初期起動時も実行（これが動かないと初期表示もおかしいはずなのだ）
 updateLayoutForce();
