@@ -849,7 +849,7 @@ function animate() {
 
 
 // カメラの位置設定
-camera.position.z = 5;  // 例えばカメラを手前に配置
+//camera.position.z = 4;  // 例えばカメラを手前に配置
 
 animate(); // アニメーションを開始
 
