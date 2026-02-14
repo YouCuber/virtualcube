@@ -819,17 +819,17 @@ buttons.forEach(button => {
         button.addEventListener('click', () => rotateBackFace(true)); // B: 時計回り
     } else if (text === "B'") {
         button.addEventListener('click', () => rotateBackFace(false)); // B': 反時計回り
-    }else if (text === 'X') {
+    }else if (text === 'x') {
         button.addEventListener('click', () => rotateX(true));
-    } else if (text === "X'") {
+    } else if (text === "x'") {
         button.addEventListener('click', () => rotateX(false));
-    } else if (text === 'Y') {
+    } else if (text === 'y') {
         button.addEventListener('click', () => rotateY(true));
-    } else if (text === "Y'") {
+    } else if (text === "y'") {
         button.addEventListener('click', () => rotateY(false));
-    } else if (text === 'Z') {
+    } else if (text === 'z') {
         button.addEventListener('click', () => rotateZ(true));
-    } else if (text === "Z'") {
+    } else if (text === "z'") {
         button.addEventListener('click', () => rotateZ(false));
     }
 });
