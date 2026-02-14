@@ -853,17 +853,20 @@ camera.position.z = 5;  // 例えばカメラを手前に配置
 
 animate(); // アニメーションを開始
 
+
 // DEBUG Start
-// スマホでログが見えないため、画面上にデバッグ情報を表示する要素を作成する
+// スマホのツールバーで隠れないように、少し中央寄りに赤色で表示するのだ
+// これで文字が表示されない問題を防ぐのだ
 const debugLog = document.createElement('div');
 debugLog.style.position = 'fixed';
-debugLog.style.top = '0';
-debugLog.style.left = '0';
-debugLog.style.backgroundColor = 'rgba(0,0,0,0.7)';
+debugLog.style.top = '15%';    // 少し下げることで、アドレスバーに隠されないようにしたのだ
+debugLog.style.left = '10px';
+debugLog.style.backgroundColor = 'red'; // 目立つ赤色にしたのだ
 debugLog.style.color = 'white';
-debugLog.style.fontSize = '10px';
-debugLog.style.zIndex = '10000';
-debugLog.style.pointerEvents = 'none'; // 操作の邪魔にならないようにする
+debugLog.style.fontSize = '18px'; // 文字を大きくしたのだ
+debugLog.style.padding = '5px';
+debugLog.style.zIndex = '100000';
+debugLog.style.pointerEvents = 'none';
 document.body.appendChild(debugLog);
 
 function showDebug(msg) {
@@ -871,46 +874,42 @@ function showDebug(msg) {
 }
 // DEBUG End
 
-// ★ 修正箇所：Chromeの不安定な挙動を力技でねじ伏せるリサイズ処理
+// ★ 修正箇所：Chromeのサイズ確定遅延をねじ伏せるためのループ処理
 window.addEventListener('resize', () => {
-    // 回転直後の状態を表示
-    showDebug(`Resize! innerHeight: ${window.innerHeight}`);
+    showDebug(`Resize start: ${window.innerWidth}x${window.innerHeight}`);
 
-    // 数回に分けて再計算を繰り返す（ChromeのUI確定タイミングがズレる対策）
-    const updateLayout = () => {
-        // 1. 最新の画面サイズを取得（vhではなくinnerHeightを基準に計算する）
-        const width = window.innerWidth;
-        const height = window.innerHeight;
-        const cubeHeight = height * 0.4;
-        const buttonHeight = height * 0.6;
+    // Chromeは回転アニメーション中、何度もサイズが変わるので、
+    // 0.2秒、0.5秒、1秒、2秒後の合計4回、しつこく再計算させるのだ！
+    const timings = [200, 500, 1000, 2000];
+    
+    timings.forEach(delay => {
+        setTimeout(() => {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            
+            // 縦画面（height > width）の時だけ、レイアウトを強制更新するのだ
+            if (height > width) {
+                const cubeHeight = Math.floor(height * 0.4);
+                const buttonHeight = Math.floor(height * 0.6);
 
-        // ★ 修正箇所：CSSのvhに頼らず、JSで直接ピクセル値を指定して強制固定する
-        const canvasContainer = document.getElementById('canvasContainer');
-        const buttonContainer = document.getElementById('buttonContainer');
-        
-        if (canvasContainer) {
-            canvasContainer.style.height = cubeHeight + "px";
-        }
-        if (buttonContainer) {
-            buttonContainer.style.height = buttonHeight + "px";
-        }
+                const canvasContainer = document.getElementById('canvasContainer');
+                const buttonContainer = document.getElementById('buttonContainer');
+                
+                if (canvasContainer) canvasContainer.style.height = cubeHeight + "px";
+                if (buttonContainer) buttonContainer.style.height = buttonHeight + "px";
 
-        // 2. レンダラーとカメラを更新
-        renderer.setSize(width, cubeHeight);
-        camera.aspect = width / cubeHeight;
-        camera.updateProjectionMatrix();
-        renderer.render(scene, camera);
+                renderer.setSize(width, cubeHeight);
+                camera.aspect = width / cubeHeight;
+                camera.updateProjectionMatrix();
+                renderer.render(scene, camera);
 
-        // DEBUG Start
-        showDebug(`Updated: ${width}x${height} | Cube: ${Math.floor(cubeHeight)}`);
-        // DEBUG End
-    };
-
-    // 0.2秒後、0.5秒後、1秒後の3回実行して、どこかで必ず合わせるのだ
-    setTimeout(updateLayout, 200);
-    setTimeout(updateLayout, 500);
-    setTimeout(updateLayout, 1000);
+                showDebug(`OK! ${width}x${height} | Cube: ${cubeHeight}`);
+            } else {
+                showDebug(`Landscape mode: ${width}x${height}`);
+            }
+        }, delay);
+    });
 });
 
-// ★ 修正箇所：初期起動時も同じロジックを走らせておく
+// 初期起動時も実行しておくのだ
 window.dispatchEvent(new Event('resize'));
