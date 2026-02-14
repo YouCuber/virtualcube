@@ -853,39 +853,64 @@ camera.position.z = 5;  // 例えばカメラを手前に配置
 
 animate(); // アニメーションを開始
 
-// ★ 修正箇所：Chrome等のモバイルブラウザで回転時にサイズが狂う問題への対策
+// DEBUG Start
+// スマホでログが見えないため、画面上にデバッグ情報を表示する要素を作成する
+const debugLog = document.createElement('div');
+debugLog.style.position = 'fixed';
+debugLog.style.top = '0';
+debugLog.style.left = '0';
+debugLog.style.backgroundColor = 'rgba(0,0,0,0.7)';
+debugLog.style.color = 'white';
+debugLog.style.fontSize = '10px';
+debugLog.style.zIndex = '10000';
+debugLog.style.pointerEvents = 'none'; // 操作の邪魔にならないようにする
+document.body.appendChild(debugLog);
+
+function showDebug(msg) {
+    debugLog.innerText = msg;
+}
+// DEBUG End
+
+// ★ 修正箇所：Chromeの不安定な挙動を力技でねじ伏せるリサイズ処理
 window.addEventListener('resize', () => {
-    // DEBUG Start
-    // 回転直後のサイズをログ出力して、計算が合っているか確認するのだ
-    console.log("Resize detected. Current innerHeight:", window.innerHeight);
-    // DEBUG End
+    // 回転直後の状態を表示
+    showDebug(`Resize! innerHeight: ${window.innerHeight}`);
 
-    // 回転アニメーションが終わるのを少し（200ミリ秒）待ってから再計算するのがコツなのだ
-    setTimeout(() => {
-        // 1. 最新の画面サイズを取得
+    // 数回に分けて再計算を繰り返す（ChromeのUI確定タイミングがズレる対策）
+    const updateLayout = () => {
+        // 1. 最新の画面サイズを取得（vhではなくinnerHeightを基準に計算する）
         const width = window.innerWidth;
-        const height = window.innerHeight * 0.4; // 上半分40%
+        const height = window.innerHeight;
+        const cubeHeight = height * 0.4;
+        const buttonHeight = height * 0.6;
 
-        // ★ 修正箇所：コンテナ自体の高さもJSから強制的に指定することで、ズレを防止するのだ
-        const container = document.getElementById('canvasContainer');
-        if (container) {
-            container.style.height = height + "px";
+        // ★ 修正箇所：CSSのvhに頼らず、JSで直接ピクセル値を指定して強制固定する
+        const canvasContainer = document.getElementById('canvasContainer');
+        const buttonContainer = document.getElementById('buttonContainer');
+        
+        if (canvasContainer) {
+            canvasContainer.style.height = cubeHeight + "px";
+        }
+        if (buttonContainer) {
+            buttonContainer.style.height = buttonHeight + "px";
         }
 
-        // 2. レンダラーのサイズを更新
-        renderer.setSize(width, height);
-
-        // 3. カメラのアスペクト比を再設定
-        camera.aspect = width / height;
-        
-        // 4. カメラの投影行列を更新
+        // 2. レンダラーとカメラを更新
+        renderer.setSize(width, cubeHeight);
+        camera.aspect = width / cubeHeight;
         camera.updateProjectionMatrix();
-
-        // 5. 画面を強制的に再描画
         renderer.render(scene, camera);
 
         // DEBUG Start
-        console.log("Resize applied. New Width:", width, "New Height:", height);
+        showDebug(`Updated: ${width}x${height} | Cube: ${Math.floor(cubeHeight)}`);
         // DEBUG End
-    }, 2000); // 0.2秒だけ待つことで、ChromeのUI確定を待つのだ
+    };
+
+    // 0.2秒後、0.5秒後、1秒後の3回実行して、どこかで必ず合わせるのだ
+    setTimeout(updateLayout, 200);
+    setTimeout(updateLayout, 500);
+    setTimeout(updateLayout, 1000);
 });
+
+// ★ 修正箇所：初期起動時も同じロジックを走らせておく
+window.dispatchEvent(new Event('resize'));
