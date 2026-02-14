@@ -853,12 +853,21 @@ camera.position.z = 5;  // 例えばカメラを手前に配置
 
 animate(); // アニメーションを開始
 
-// ウィンドウリサイズ時のカメラ調整
+// ★ 修正箇所：ウィンドウリサイズ（画面回転）時の再計算処理を強化
 window.addEventListener('resize', () => {
+    // 現在の画面サイズを再取得する
     const width = window.innerWidth;
-    const height = window.innerHeight / 2;
+    const height = window.innerHeight * 0.4; // キューブ領域は40%
 
+    // レンダラーのサイズを更新
     renderer.setSize(width, height);
+
+    // カメラのアスペクト比（縦横比）を新しいサイズで再計算
     camera.aspect = width / height;
+    
+    // カメラの投影行列を更新（これを忘れると表示が戻らないのだ）
     camera.updateProjectionMatrix();
+
+    // 念のため即座に一度レンダリングして画面を更新する
+    renderer.render(scene, camera);
 });
