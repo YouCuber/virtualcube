@@ -853,32 +853,6 @@ camera.position.z = 5;  // 例えばカメラを手前に配置
 
 animate(); // アニメーションを開始
 
-
-// DEBUG Start
-// スマホのツールバーで隠れないように、少し中央寄りに赤色で表示するのだ
-// これで文字が表示されない問題を防ぐのだ
-const debugLog = document.createElement('div');
-debugLog.style.position = 'fixed';
-debugLog.style.top = '15%';    // 少し下げることで、アドレスバーに隠されないようにしたのだ
-debugLog.style.left = '10px';
-debugLog.style.backgroundColor = 'red'; // 目立つ赤色にしたのだ
-debugLog.style.color = 'white';
-debugLog.style.fontSize = '14px'; // 読みやすいサイズ
-debugLog.style.padding = '5px';
-debugLog.style.zIndex = '100000';
-debugLog.style.pointerEvents = 'none';
-document.body.appendChild(debugLog);
-
-function showDebug(msg) {
-    debugLog.innerText = msg;
-}
-
-// イベントを待たず、0.5秒おきに強制的にサイズをチェックして数値を出すのだ
-setInterval(() => {
-    showDebug(`Live: ${window.innerWidth}x${window.innerHeight} | Ori: ${screen.orientation ? screen.orientation.type : 'N/A'}`);
-}, 500);
-// DEBUG End
-
 // レイアウトを強制更新する関数
 function updateLayoutForce() {
     const width = window.innerWidth;
