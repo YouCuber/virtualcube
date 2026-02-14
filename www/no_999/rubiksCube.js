@@ -860,11 +860,17 @@ window.addEventListener('resize', () => {
     console.log("Resize detected. Current innerHeight:", window.innerHeight);
     // DEBUG End
 
-    // 回転アニメーションが終わるのを少し（100ミリ秒）待ってから再計算するのがコツなのだ
+    // 回転アニメーションが終わるのを少し（200ミリ秒）待ってから再計算するのがコツなのだ
     setTimeout(() => {
         // 1. 最新の画面サイズを取得
         const width = window.innerWidth;
         const height = window.innerHeight * 0.4; // 上半分40%
+
+        // ★ 修正箇所：コンテナ自体の高さもJSから強制的に指定することで、ズレを防止するのだ
+        const container = document.getElementById('canvasContainer');
+        if (container) {
+            container.style.height = height + "px";
+        }
 
         // 2. レンダラーのサイズを更新
         renderer.setSize(width, height);
@@ -881,5 +887,5 @@ window.addEventListener('resize', () => {
         // DEBUG Start
         console.log("Resize applied. New Width:", width, "New Height:", height);
         // DEBUG End
-    }, 200); // 0.2秒だけ待つことで、ChromeのUI確定を待つのだ
+    }, 2000); // 0.2秒だけ待つことで、ChromeのUI確定を待つのだ
 });
