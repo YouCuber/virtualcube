@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
 <head>
-<!--//<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/110/three.min.js"></script>
-//<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/controls/OrbitControls.js"></script>-->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mobile Rubik's Cube</title>
     <script type="importmap">
       {
         "imports": {
@@ -10,17 +11,124 @@
           "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/"
         }
       }
-    </script>    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rubik's Cube</title>
+    </script>
     <style>
         body {
             margin: 0;
+            padding: 0;
             overflow: hidden;
+            font-family: Arial, sans-serif;
+            background-color: #000;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100vw;
         }
+
+        /* 上半分：キューブ */
+        #canvasContainer {
+            height: 50vh;
+            width: 100%;
+            background-color: #000;
+        }
+
+        /* 下半分：ボタン */
+        #buttonContainer {
+            height: 50vh;
+            background-color: #111;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-evenly;
+            padding: 10px;
+            box-sizing: border-box;
+            border-top: 2px solid #333;
+        }
+
+        .buttonRow {
+            display: flex;
+            justify-content: center;
+            gap: 6px; /* ボタンが多いので隙間を少し狭くしたのだ */
+            height: 18%; /* 5行にするので1行の高さを調整 */
+        }
+
+        button {
+            flex: 1;
+            max-width: 80px;
+            font-size: 18px; /* ボタンが多い行に合わせて少しサイズ調整 */
+            font-weight: bold;
+            border: none;
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+            touch-action: manipulation;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.1s;
+        }
+
+        button:active {
+            transform: scale(0.9);
+            filter: brightness(1.5);
+        }
+
+        /* 各ボタンの色設定 */
+        .btn-u { background-color: #666; }
+        .btn-l { background-color: #d32f2f; }
+        .btn-f { background-color: #388e3c; }
+        .btn-r { background-color: #f57c00; }
+        .btn-b { background-color: #1976d2; }
+        .btn-d { background-color: #afb42b; }
+        .btn-rot { background-color: #444; } /* ★ 修正箇所：全回転ボタン用の色 */
+
     </style>
 </head>
 <body>
-    <!-- JavaScriptファイルをモジュールとして読み込む -->
+
+    <div id="canvasContainer"></div>
+
+    <div id="buttonContainer">
+        <!-- 1段目: U面 -->
+        <div class="buttonRow">
+            <button class="btn-u">U</button>
+            <button class="btn-u">U'</button>
+        </div>
+
+        <!-- 2段目: 側面（正回転） -->
+        <div class="buttonRow">
+            <button class="btn-l">L</button>
+            <button class="btn-f">F</button>
+            <button class="btn-r">R</button>
+            <button class="btn-b">B</button>
+        </div>
+
+        <!-- 3段目: 側面（逆回転） -->
+        <div class="buttonRow">
+            <button class="btn-l">L'</button>
+            <button class="btn-f">F'</button>
+            <button class="btn-r">R'</button>
+            <button class="btn-b">B'</button>
+        </div>
+
+        <!-- 4段目: D面 -->
+        <div class="buttonRow">
+            <button class="btn-d">D</button>
+            <button class="btn-d">D'</button>
+        </div>
+
+        <!-- 5段目: 全回転（X, Y, Z） -->
+        <!-- ★ 修正箇所：最下段に全回転ボタンを一列に配置 -->
+        <div class="buttonRow">
+            <button class="btn-rot">X</button>
+            <button class="btn-rot">X'</button>
+            <button class="btn-rot">Y</button>
+            <button class="btn-rot">Y'</button>
+            <button class="btn-rot">Z</button>
+            <button class="btn-rot">Z'</button>
+        </div>
+    </div>
+
     <script type="module" src="rubiksCube.js"></script>
+
 </body>
 </html>

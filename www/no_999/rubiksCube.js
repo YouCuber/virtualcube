@@ -3,14 +3,27 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
 // シーン、カメラ、レンダラーの初期化
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-const renderer = new THREE.WebGLRenderer();
-renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
+// --- 修正後：最初から「半分」を意識して作る ---
 
+// 1. まずサイズを計算しておく
+const width = window.innerWidth;
+const height = window.innerHeight / 2; // 「半分」であることを変数にする
+
+const scene = new THREE.Scene();
+
+// 2. カメラのアスペクト比を「半分」のサイズで計算する（ここが一番重要！）
+const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+
+// 3. レンダラーのサイズを半分にする（ユーザーさんのコードと同じ内容）
+renderer.setSize(width, height);
+
+// 4. 指定したコンテナの中に入れる（これもユーザーさんのコードと同じ内容）
+const container = document.getElementById('canvasContainer');
+container.appendChild(renderer.domElement);
 // カメラ位置を設定
-camera.position.set(5, 5, 5);
+camera.position.set(3.0, 2.5, 4.0); 
 //camera.position.set(0, 0, 5);
 camera.lookAt(0, 0, 0);
 
@@ -54,7 +67,7 @@ function createFaceWithNumber(number, color, x, y, z, rotationX, rotationY, rota
     context.font = '96px Arial';
     context.textAlign = 'center';
     context.textBaseline = 'middle';
-    context.fillText(number, canvas.width / 2, canvas.height / 2);
+//    context.fillText(number, canvas.width / 2, canvas.height / 2);
 
     // Canvas をテクスチャに変換
     const texture = new THREE.CanvasTexture(canvas);
@@ -167,10 +180,10 @@ const f2l_parts = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23
 
 // 輝度を下げる関数
 const DecreaseBrightness = (material) => {
-    const color = material.color;
-    color.r = 0.25;  // 赤成分
-    color.g = 0.25;  // 緑成分
-    color.b = 0.25;  // 青成分
+//    const color = material.color;
+//    color.r = 0.25;  // 赤成分
+//    color.g = 0.25;  // 緑成分
+//    color.b = 0.25;  // 青成分
 };
 
 // 元の色に戻す関数
@@ -511,13 +524,158 @@ function rotateY(clockwise = true) {
             handleBrightnessChange(); // スロットが揃っていたら輝度を下げる
             return;
         }
-4
+
         // 1ステップ分の回転量を計算
         const rotationStep = Math.sign(targetRotation) * Math.min(step, Math.abs(targetRotation - currentRotation));
         currentRotation += rotationStep; // 現在の回転量を更新
 
         // 各ピースに回転を適用
         allPieces.forEach(index => {
+            const group = cubeGroups[index];
+            group.forEach(piece => {
+                rotateAroundPoint(piece, center, axis, rotationStep);
+            });
+        });
+
+        // 次のフレームを要求
+        requestAnimationFrame(animateRotation);
+    }
+
+    animateRotation();
+}
+
+// 左面のピースを回転させる関数
+function rotateLeftFace(clockwise = true) {
+    if (isRotating) return; // 回転中なら入力を無視
+
+    const leftFacePieces = [cube_now[0], cube_now[2], cube_now[4], cube_now[6], cube_now[11], cube_now[15], cube_now[18], cube_now[20], cube_now[23]]; // 左面のピース
+    const step = Math.PI / 12; // 1フレームごとの回転量
+    const totalRotation = Math.PI / 2; // 目標回転量
+    const axis = new THREE.Vector3(-1, 0, 0); // グローバルX軸（左方向）
+    const center = new THREE.Vector3(0, 0, 0); // 回転の中心
+
+    targetRotation = totalRotation * (clockwise ? -1 : 1); // 目標回転量を設定
+    currentRotation = 0; // 現在の回転量をリセット
+    isRotating = true; // 回転中フラグを立てる
+
+    function animateRotation() {
+        if (Math.abs(currentRotation) >= Math.abs(targetRotation)) {
+            isRotating = false; // 回転完了
+            // 回転後の場所置き換え
+            if (clockwise ) {
+                [cube_now[0], cube_now[2], cube_now[6], cube_now[4]] = [cube_now[4], cube_now[0], cube_now[2], cube_now[6]];  
+                [cube_now[15], cube_now[20], cube_now[23], cube_now[18]] = [cube_now[18], cube_now[15], cube_now[20], cube_now[23]];
+            } else {
+                [cube_now[0], cube_now[2], cube_now[6], cube_now[4]] = [cube_now[2], cube_now[6], cube_now[4], cube_now[0]];  
+                [cube_now[15], cube_now[20], cube_now[23], cube_now[18]] = [cube_now[20], cube_now[23], cube_now[18], cube_now[15]];
+            }
+            handleBrightnessChange(); // スロットが揃っていたら輝度を下げる
+            return;
+        }
+
+        // 1ステップ分の回転量を計算
+        const rotationStep = Math.sign(targetRotation) * Math.min(step, Math.abs(targetRotation - currentRotation));
+        currentRotation += rotationStep; // 現在の回転量を更新
+
+        // 各ピースに回転を適用
+        leftFacePieces.forEach(index => {
+            const group = cubeGroups[index];
+            group.forEach(piece => {
+                rotateAroundPoint(piece, center, axis, rotationStep);
+            });
+        });
+
+        // 次のフレームを要求
+        requestAnimationFrame(animateRotation);
+    }
+
+    animateRotation();
+}
+
+// 下面のピースを回転させる関数
+function rotateDownFace(clockwise = true) {
+    if (isRotating) return; // 回転中なら入力を無視
+
+    const downFacePieces = [cube_now[4], cube_now[5], cube_now[6], cube_now[7], cube_now[9], cube_now[22], cube_now[23], cube_now[24], cube_now[25]]; // 下面のピース
+    const step = Math.PI / 12; // 1フレームごとの回転量
+    const totalRotation = Math.PI / 2; // 目標回転量
+    const axis = new THREE.Vector3(0, -1, 0); // グローバルY軸（下方向）
+    const center = new THREE.Vector3(0, 0, 0); // 回転の中心
+
+    targetRotation = totalRotation * (clockwise ? -1 : 1); // 目標回転量を設定
+    currentRotation = 0; // 現在の回転量をリセット
+    isRotating = true; // 回転中フラグを立てる
+
+    function animateRotation() {
+        if (Math.abs(currentRotation) >= Math.abs(targetRotation)) {
+            isRotating = false; // 回転完了
+            // 回転後の場所置き換え
+            if (clockwise) { 
+                [cube_now[4], cube_now[5], cube_now[6], cube_now[7]] = [cube_now[5], cube_now[7], cube_now[4], cube_now[6]]; 
+                [cube_now[22], cube_now[24], cube_now[25], cube_now[23]] = [cube_now[24], cube_now[25], cube_now[23], cube_now[22]]; 
+            } else {
+                [cube_now[4], cube_now[5], cube_now[6], cube_now[7]] = [cube_now[6], cube_now[4], cube_now[7], cube_now[5]]; 
+                [cube_now[22], cube_now[24], cube_now[25], cube_now[23]] = [cube_now[23], cube_now[22], cube_now[24], cube_now[25]]; 
+            }
+            handleBrightnessChange(); // スロットが揃っていたら輝度を下げる
+            return;
+        }
+
+        // 1ステップ分の回転量を計算
+        const rotationStep = Math.sign(targetRotation) * Math.min(step, Math.abs(targetRotation - currentRotation));
+        currentRotation += rotationStep; // 現在の回転量を更新
+
+        // 各ピースに回転を適用
+        downFacePieces.forEach(index => {
+            const group = cubeGroups[index];
+            group.forEach(piece => {
+                rotateAroundPoint(piece, center, axis, rotationStep);
+            });
+        });
+
+        // 次のフレームを要求
+        requestAnimationFrame(animateRotation);
+    }
+
+    animateRotation();
+}
+
+// 背面のピースを回転させる関数
+function rotateBackFace(clockwise = true) {
+    if (isRotating) return; // 回転中なら入力を無視
+
+    const backFacePieces = [cube_now[0], cube_now[1], cube_now[4], cube_now[5], cube_now[13], cube_now[14], cube_now[18], cube_now[19], cube_now[22]]; // 背面のピース
+    const step = Math.PI / 12; // 1フレームごとの回転量
+    const totalRotation = Math.PI / 2; // 目標回転量
+    const axis = new THREE.Vector3(0, 0, -1); // グローバルZ軸（背方向）
+    const center = new THREE.Vector3(0, 0, 0); // 回転の中心
+
+    targetRotation = totalRotation * (clockwise ? -1 : 1); // 目標回転量を設定
+    currentRotation = 0; // 現在の回転量をリセット
+    isRotating = true; // 回転中フラグを立てる
+
+    function animateRotation() {
+        if (Math.abs(currentRotation) >= Math.abs(targetRotation)) {
+            isRotating = false; // 回転完了
+            // 回転後の場所置き換え
+            if (clockwise) { 
+                [cube_now[0], cube_now[4], cube_now[5], cube_now[1]] = [cube_now[1], cube_now[0], cube_now[4], cube_now[5]]; 
+                [cube_now[18], cube_now[22], cube_now[19], cube_now[14]] = [cube_now[14], cube_now[18], cube_now[22], cube_now[19]]; 
+            } else {
+                [cube_now[0], cube_now[1], cube_now[5], cube_now[4]] = [cube_now[4], cube_now[0], cube_now[1], cube_now[5]]; 
+                [cube_now[14], cube_now[19], cube_now[22], cube_now[18]] = [cube_now[18], cube_now[14], cube_now[19], cube_now[22]]; 
+            }
+
+            handleBrightnessChange(); // スロットが揃っていたら輝度を下げる
+            return;
+        }
+
+        // 1ステップ分の回転量を計算
+        const rotationStep = Math.sign(targetRotation) * Math.min(step, Math.abs(targetRotation - currentRotation));
+        currentRotation += rotationStep; // 現在の回転量を更新
+
+        // 各ピースに回転を適用
+        backFacePieces.forEach(index => {
             const group = cubeGroups[index];
             group.forEach(piece => {
                 rotateAroundPoint(piece, center, axis, rotationStep);
@@ -607,6 +765,18 @@ document.addEventListener('keydown', event => {
         const clockwise = !event.shiftKey; // Shiftキーを押している場合は反時計回り
         rotateFrontFace(clockwise);
     }
+    if (event.key.toLowerCase() === 'l') {
+        const clockwise = !event.shiftKey; // Shiftキーを押している場合は反時計回り
+        rotateLeftFace(clockwise);
+    }
+    if (event.key.toLowerCase() === 'd') {
+        const clockwise = !event.shiftKey; // Shiftキーを押している場合は反時計回り
+        rotateDownFace(clockwise);
+    }
+    if (event.key.toLowerCase() === 'b') {
+        const clockwise = !event.shiftKey; // Shiftキーを押している場合は反時計回り
+        rotateBackFace(clockwise);
+    }
     if (event.key.toLowerCase() === 'x') {
         const clockwise = !event.shiftKey; // Shiftキーを押している場合は反時計回り
         rotateX(clockwise);
@@ -621,7 +791,48 @@ document.addEventListener('keydown', event => {
     }
 });
 
-
+// ボタンイベントリスナーを追加
+const buttons = document.querySelectorAll('button');
+buttons.forEach(button => {
+    const text = button.textContent.trim();
+    if (text === 'R') {
+        button.addEventListener('click', () => rotateRightFace(true)); // R: 時計回り
+    } else if (text === "R'") {
+        button.addEventListener('click', () => rotateRightFace(false)); // R': 反時計回り
+    } else if (text === 'U') {
+        button.addEventListener('click', () => rotateUpperFace(true)); // U: 時計回り
+    } else if (text === "U'") {
+        button.addEventListener('click', () => rotateUpperFace(false)); // U': 反時計回り
+    } else if (text === 'F') {
+        button.addEventListener('click', () => rotateFrontFace(true)); // F: 時計回り
+    } else if (text === "F'") {
+        button.addEventListener('click', () => rotateFrontFace(false)); // F': 反時計回り
+    } else if (text === 'L') {
+        button.addEventListener('click', () => rotateLeftFace(true)); // L: 時計回り
+    } else if (text === "L'") {
+        button.addEventListener('click', () => rotateLeftFace(false)); // L': 反時計回り
+    } else if (text === 'D') {
+        button.addEventListener('click', () => rotateDownFace(true)); // D: 時計回り
+    } else if (text === "D'") {
+        button.addEventListener('click', () => rotateDownFace(false)); // D': 反時計回り
+    } else if (text === 'B') {
+        button.addEventListener('click', () => rotateBackFace(true)); // B: 時計回り
+    } else if (text === "B'") {
+        button.addEventListener('click', () => rotateBackFace(false)); // B': 反時計回り
+    }else if (text === 'X') {
+        button.addEventListener('click', () => rotateX(true));
+    } else if (text === "X'") {
+        button.addEventListener('click', () => rotateX(false));
+    } else if (text === 'Y') {
+        button.addEventListener('click', () => rotateY(true));
+    } else if (text === "Y'") {
+        button.addEventListener('click', () => rotateY(false));
+    } else if (text === 'Z') {
+        button.addEventListener('click', () => rotateZ(true));
+    } else if (text === "Z'") {
+        button.addEventListener('click', () => rotateZ(false));
+    }
+});
 
 // OrbitControlsのインスタンス作成
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -645,10 +856,9 @@ animate(); // アニメーションを開始
 // ウィンドウリサイズ時のカメラ調整
 window.addEventListener('resize', () => {
     const width = window.innerWidth;
-    const height = window.innerHeight;
+    const height = window.innerHeight / 2;
 
     renderer.setSize(width, height);
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
 });
-
