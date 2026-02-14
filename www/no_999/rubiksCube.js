@@ -853,21 +853,33 @@ camera.position.z = 5;  // 例えばカメラを手前に配置
 
 animate(); // アニメーションを開始
 
-// ★ 修正箇所：ウィンドウリサイズ（画面回転）時の再計算処理を強化
+// ★ 修正箇所：Chrome等のモバイルブラウザで回転時にサイズが狂う問題への対策
 window.addEventListener('resize', () => {
-    // 現在の画面サイズを再取得する
-    const width = window.innerWidth;
-    const height = window.innerHeight * 0.4; // キューブ領域は40%
+    // DEBUG Start
+    // 回転直後のサイズをログ出力して、計算が合っているか確認するのだ
+    console.log("Resize detected. Current innerHeight:", window.innerHeight);
+    // DEBUG End
 
-    // レンダラーのサイズを更新
-    renderer.setSize(width, height);
+    // 回転アニメーションが終わるのを少し（100ミリ秒）待ってから再計算するのがコツなのだ
+    setTimeout(() => {
+        // 1. 最新の画面サイズを取得
+        const width = window.innerWidth;
+        const height = window.innerHeight * 0.4; // 上半分40%
 
-    // カメラのアスペクト比（縦横比）を新しいサイズで再計算
-    camera.aspect = width / height;
-    
-    // カメラの投影行列を更新（これを忘れると表示が戻らないのだ）
-    camera.updateProjectionMatrix();
+        // 2. レンダラーのサイズを更新
+        renderer.setSize(width, height);
 
-    // 念のため即座に一度レンダリングして画面を更新する
-    renderer.render(scene, camera);
+        // 3. カメラのアスペクト比を再設定
+        camera.aspect = width / height;
+        
+        // 4. カメラの投影行列を更新
+        camera.updateProjectionMatrix();
+
+        // 5. 画面を強制的に再描画
+        renderer.render(scene, camera);
+
+        // DEBUG Start
+        console.log("Resize applied. New Width:", width, "New Height:", height);
+        // DEBUG End
+    }, 200); // 0.2秒だけ待つことで、ChromeのUI確定を待つのだ
 });
