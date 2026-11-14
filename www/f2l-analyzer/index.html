@@ -54,6 +54,10 @@
   #stdPanel .std-title { color:#ffd54a; font-weight:bold; margin-bottom:4px; }
   #stdPanel .std-btns { margin-top:8px; display:flex; gap:8px; flex-wrap:wrap; }
   #stdPanel button { padding:6px 10px; }
+  #shortPanel { margin-top:10px; padding:10px; border:1px solid #4fc3f7; border-radius:8px; background:#10222e; }
+  #shortPanel .std-title { color:#4fc3f7; font-weight:bold; margin-bottom:4px; }
+  #shortPanel .std-btns { margin-top:8px; display:flex; gap:8px; flex-wrap:wrap; }
+  #shortPanel button { padding:6px 10px; }
   .scene { height:360px; perspective:950px; position:relative; overflow:hidden; border-radius:12px; background:radial-gradient(circle at 50% 42%, #18204d 0%, #0a0e27 70%); touch-action:none; cursor:grab; }
   .scene:active { cursor:grabbing; }
   .cube3d { position:absolute; left:50%; top:50%; width:0; height:0; transform-style:preserve-3d; }
@@ -127,6 +131,7 @@
       <button id="searchBtn" class="big">解を探す</button>
       <button id="cancelBtn" style="display:none">中断</button>
       <div id="stdPanel" style="display:none"></div>
+      <div id="shortPanel" style="display:none"></div>
       <div id="searchInfo"></div>
       <div id="results"></div>
       <h3>手順アナライザ</h3>
@@ -1179,6 +1184,45 @@ function renderStdPanel(std) {
   });
 }
 
+// 最短手順（DBの最短の解から、MCC最安のもの）を引く
+function lookupShortest(state, targetName, preserveList) {
+  if (!Object.keys(PAIR_DB).length) return null;
+  const got = dbKeyFor(state, targetName, preserveList);
+  if (!got) return null;
+  const e = PAIR_DB[got.key];
+  if (!e || !(e.depth > 0)) return null;
+  let best = null;
+  for (const s of e.sols) {
+    if (s.htm !== e.depth) continue;
+    const toks = rotToksY(parseAlg(s.alg), -got.k);
+    const mc = mccScore(toks);
+    if (!best || mc.score < best.mc.score) best = { toks, mc };
+  }
+  return { depth: e.depth, best };
+}
+function renderShortPanel(sp) {
+  const panel = $('shortPanel');
+  if (!sp) { panel.style.display = 'none'; panel.innerHTML = ''; return; }
+  panel.style.display = '';
+  panel.innerHTML = '<div class="std-title">最短手順（' + sp.depth + '手）</div>' +
+    (sp.best
+      ? '<div class="alg">' + highlightedHTML(sp.best.toks, sp.best.mc.segs) + '</div>' +
+        '<div class="meta">MCC ' + sp.best.mc.score.toFixed(2) + '</div>'
+      : '<div class="meta">最短の長さだけ判明（解そのものはDB未収録）</div>') +
+    '<div class="std-btns">' +
+    '<button data-p="0">最短だけ探す</button>' +
+    '<button data-p="1">＋1手だけ探す</button>' +
+    '<button data-p="2">＋2手だけ探す</button>' +
+    '</div>';
+  panel.querySelectorAll('button').forEach(b => {
+    b.onclick = () => {
+      const L = sp.depth + parseInt(b.dataset.p, 10);
+      if (L >= 4 && L <= 16) { $('baseRange').value = L; $('minusRange').value = 0; $('plusRange').value = 0; updWindow(); }
+      doSearch({ minLen: L, maxLen: L });
+    };
+  });
+}
+
 function setInfo(main, warn) {
   const si = $('searchInfo');
   si.textContent = main;
@@ -1331,6 +1375,7 @@ function doSearch(explicitWin) {
     }
     setUiLock(true);
     renderStdPanel(lookupStandard(cur, target, [...preserve]));
+    renderShortPanel(lookupShortest(cur, target, [...preserve]));
     const baseLen = parseInt($('baseRange').value, 10) || 7;
     const minus = parseInt($('minusRange').value, 10) || 0;
     const plus = parseInt($('plusRange').value, 10) || 0;
