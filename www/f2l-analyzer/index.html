@@ -1512,7 +1512,13 @@ function doSearch(explicitWin) {
         }
       );
     };
-    if (!jobs.length) { renderNow('最短 ' + depth + ' 手（' + minLen + '〜' + maxLen + ' 手の解を収集） の候補 ' + scored.length + ' 件（回しやすい順） ※事前計算DBから表示'); finishUI(); activeRun = null; return; }
+    if (!jobs.length) {
+      if (!scored.length) setInfo('', depth > 0
+        ? '最短は ' + depth + ' 手で、指定した長さ（' + minLen + '〜' + maxLen + ' 手）では解けないよ。基準を上げてみて'
+        : '今の設定では解が無いよ。使う回転やスロット設定を見直してみて');
+      else renderNow('最短 ' + depth + ' 手（' + minLen + '〜' + maxLen + ' 手の解を収集） の候補 ' + scored.length + ' 件（回しやすい順） ※事前計算DBから表示');
+      finishUI(); activeRun = null; return;
+    }
     nextJob();
   } catch (e) { $('searchInfo').textContent = 'エラー: ' + e.message; btn.disabled = false; setUiLock(false); if (cancelBtn) cancelBtn.style.display = 'none'; } }, 30);
 }
