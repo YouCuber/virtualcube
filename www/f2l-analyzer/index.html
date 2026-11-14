@@ -1419,11 +1419,12 @@ function doSearch(explicitWin) {
       return;
     }
     setUiLock(true);
-    // センターが動いた形は、DB・模範・最短パネル（センター基準で読み替える資産）の
-    // 対象外。実検索はそのままの枠で正しく探せるので、そちらに任せる
-    const frameMoved = FACES.some((f, i) => cur[CENTER_SLOT[f.name]] !== i);
-    renderStdPanel(frameMoved ? null : lookupStandard(cur, target, [...preserve]));
-    renderShortPanel(frameMoved ? null : lookupShortest(cur, target, [...preserve]));
+    // DB・模範・最短パネルは「センターの色で読み替えて全体照合」する資産で、
+    // 照合（dbKeyFor）が安全弁。持ち替えだけの形（黄クロス＝x2など）は読み替えで
+    // 正確に一致するので使える。f' のように枠がねじれた形は照合で落ちて null に
+    // なるので、その場合は実検索に任せられる（2026-11-14 あっぱー指摘で見直し）
+    renderStdPanel(lookupStandard(cur, target, [...preserve]));
+    renderShortPanel(lookupShortest(cur, target, [...preserve]));
     const baseLen = parseInt($('baseRange').value, 10) || 7;
     const minus = parseInt($('minusRange').value, 10) || 0;
     const plus = parseInt($('plusRange').value, 10) || 0;
@@ -1431,7 +1432,7 @@ function doSearch(explicitWin) {
     const maxLen = explicitWin ? explicitWin.maxLen : baseLen + plus;
     const capIdx = parseInt($('capRange').value, 10);
     const maxNodes = CAP_STEPS[isNaN(capIdx) ? 2 : capIdx] ?? 1200000;
-    const dbHit = frameMoved ? null : lookupPairDBFull(cur, target, [...preserve], [...enabledFams], minLen, maxLen);
+    const dbHit = lookupPairDBFull(cur, target, [...preserve], [...enabledFams], minLen, maxLen);
     // DB は「6面全部ON」で作った資産。使う回転を1つでも絞っていたら（wide 解禁も含む）、
     // DB の「探し終わった長さ」は信用できない（絞った条件ではまだ探していない）。
     // DB の解は取り込みつつ、窓の長さは全部 実検索する。最短も絞った条件の値を実検索から取る
