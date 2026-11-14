@@ -1404,6 +1404,7 @@ function setUiLock(v) {
 
 // 探索
 function doSearch(explicitWin) {
+  resetCam(); // どのボタンから始まった検索でも、カメラは正面に戻す（あっぱー要望 2026-11-14）
   if (activeRun) { const r = activeRun; activeRun = null; r.cancel(); }
   const btn = $('searchBtn');
   const cancelBtn = $('cancelBtn');
