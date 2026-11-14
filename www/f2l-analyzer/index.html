@@ -33,6 +33,7 @@
   button:hover { background:#2f3c82; }
   button:disabled { opacity:.5; cursor:wait; }
   button.chip.on { background:#ffd54a; color:#212121; border-color:#ffd54a; font-weight:bold; }
+  button:disabled, input:disabled { opacity:.45; }
   button.mv { min-width:40px; padding:5px 6px; font-size:13px; }
   button.big { width:100%; padding:12px; font-size:17px; font-weight:bold; background:#3949ab; margin-top:10px; }
   input { background:#0a0e27; color:#e8eaf6; border:1px solid #3d4a9e; border-radius:8px; padding:7px 9px; font-size:14px; flex:1 1 180px; }
@@ -980,6 +981,7 @@ function renderSlotControls() {
     const b = document.createElement('button');
     b.textContent = name;
     b.className = 'chip' + (target === name ? ' on' : '');
+    b.disabled = uiLock;
     b.onclick = () => { target = name; preserve.delete(name); rebuildBase(true); };
     t.appendChild(b);
   }
@@ -995,6 +997,7 @@ function renderSlotControls() {
     const keep = preserve.has(name);
     b.textContent = keep ? '保持する（完成を守る）' : '空き（作業場にしてよい）';
     b.className = 'chip' + (keep ? ' on' : '');
+    b.disabled = uiLock;
     b.onclick = () => { if (keep) preserve.delete(name); else preserve.add(name); rebuildBase(true); };
     row.appendChild(label);
     row.appendChild(b);
@@ -1006,6 +1009,7 @@ function renderSlotControls() {
     const b = document.createElement('button');
     b.textContent = fam;
     b.className = 'chip' + (enabledFams.has(fam) ? ' on' : '');
+    b.disabled = uiLock;
     b.onclick = () => { if (enabledFams.has(fam)) enabledFams.delete(fam); else enabledFams.add(fam); renderSlotControls(); };
     f.appendChild(b);
   }
@@ -1301,6 +1305,12 @@ function runSearchJob(job, hooks) {
   return handle;
 }
 let activeRun = null; // { cancel() } 実行中の探索全体
+let uiLock = false; // 探索中は条件パネル（対象・保持・使う回転・長さ・上限）を触れないようにする
+function setUiLock(v) {
+  uiLock = v;
+  for (const id of ['baseRange', 'minusRange', 'plusRange', 'capRange']) { const el = $(id); if (el) el.disabled = v; }
+  renderSlotControls();
+}
 
 // 探索
 function doSearch(explicitWin) {
@@ -1317,6 +1327,7 @@ function doSearch(explicitWin) {
       btn.disabled = false;
       return;
     }
+    setUiLock(true);
     renderStdPanel(lookupStandard(cur, target, [...preserve]));
     const baseLen = parseInt($('baseRange').value, 10) || 7;
     const minus = parseInt($('minusRange').value, 10) || 0;
@@ -1358,6 +1369,7 @@ function doSearch(explicitWin) {
     };
     const finishUI = () => {
       btn.disabled = false;
+      setUiLock(false);
       if (cancelBtn) cancelBtn.style.display = 'none';
       if (activeRun === run) activeRun = null;
     };
@@ -1445,7 +1457,7 @@ function doSearch(explicitWin) {
     };
     if (!jobs.length) { renderNow('最短 ' + depth + ' 手（' + minLen + '〜' + maxLen + ' 手の解を収集） の候補 ' + scored.length + ' 件（回しやすい順） ※事前計算DBから表示'); finishUI(); activeRun = null; return; }
     nextJob();
-  } catch (e) { $('searchInfo').textContent = 'エラー: ' + e.message; btn.disabled = false; if (cancelBtn) cancelBtn.style.display = 'none'; } }, 30);
+  } catch (e) { $('searchInfo').textContent = 'エラー: ' + e.message; btn.disabled = false; setUiLock(false); if (cancelBtn) cancelBtn.style.display = 'none'; } }, 30);
 }
 // アナライザ
 function doAnalyze() {
