@@ -1598,7 +1598,7 @@ window.addEventListener('DOMContentLoaded', () => {
   $('plusRange').oninput = updWindow;
   updWindow();
   $('anaBtn').onclick = doAnalyze;
-  $('resetBtn').onclick = () => { cur = maskIrrelevant(SOLVED); render(); };
+  $('resetBtn').onclick = () => { cur = maskIrrelevant(orientationWithDown(crossPaint)); render(); }; // 選んだクロス面が下に来る向きの完成状態に戻す
   $('setupBtn').onclick = () => rebuildBase(false);
   // 状態作りの適用は「色の組」でピースを追いかける。今の形で色が付いているピースが
   // 追うべきピースで、その色の組は回しても変わらない。センター基準で残すピースを
