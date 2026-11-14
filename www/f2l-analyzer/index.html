@@ -48,6 +48,7 @@
   .pat-trigger { background:#1f6d3a; }
   .meta { color:#9aa5d6; font-size:13px; margin-top:3px; }
   #searchInfo { margin-top:10px; color:#c5cae9; }
+  .capwarn { color:#ff5252; font-weight:700; }
   #stdPanel { margin-top:10px; padding:10px; border:1px solid #ffd54a; border-radius:8px; background:#2a2410; }
   #stdPanel .std-title { color:#ffd54a; font-weight:bold; margin-bottom:4px; }
   #stdPanel .std-btns { margin-top:8px; display:flex; gap:8px; flex-wrap:wrap; }
@@ -1172,8 +1173,14 @@ function renderStdPanel(std) {
   });
 }
 
-function renderScored(scored, infoText) {
-  $('searchInfo').textContent = infoText;
+function setInfo(main, warn) {
+  const si = $('searchInfo');
+  si.textContent = main;
+  if (warn) { const sp = document.createElement('span'); sp.className = 'capwarn'; sp.textContent = warn; si.appendChild(sp); }
+}
+
+function renderScored(scored, infoText, warnText) {
+  setInfo(infoText, warnText);
   const host = $('results');
   for (const r of scored.slice(0, 30)) {
     const div = document.createElement('div');
@@ -1338,7 +1345,7 @@ function doSearch(explicitWin) {
     let liveRes = null; // DBなし経路の最終結果メタ
     const fmtNodes = (n) => n >= 10000 ? '約' + Math.round(n / 10000) + '万' : '' + n;
     const sortScored = () => scored.sort((a, b) => (a.mcc.score - b.mcc.score) || (a.met.htm - b.met.htm));
-    const renderNow = (infoText) => { sortScored(); $('results').innerHTML = ''; renderScored(scored, infoText); };
+    const renderNow = (infoText, warnText) => { sortScored(); $('results').innerHTML = ''; renderScored(scored, infoText, warnText); };
     const statusText = () => {
       const base = depth > 0 ? '最短 ' + depth + ' 手の候補を探し中…' : '探索中…';
       const prog = curLabel != null ? '（実検索： ' + curLabel + '手／試した候補 ' + fmtNodes(curNodes) + '）' : '（試した候補 ' + fmtNodes(curNodes) + '）';
@@ -1366,36 +1373,34 @@ function doSearch(explicitWin) {
       if (liveRes && liveRes.windowMiss) { $('searchInfo').textContent = '最短は ' + liveRes.depth + ' 手で、指定した長さ（' + minLen + '〜' + maxLen + ' 手）では解けないよ。基準を上げてみて'; return; }
       if (!scored.length) {
         if (dbHit) {
-          $('searchInfo').textContent = cappedLens.length
-            ? '探索の上限（' + capText(maxNodes) + '）に達して、指定した長さ（' + minLen + '〜' + maxLen + ' 手）の解は確認できなかったよ（解が無いのではなく、探し切れていない）。上限を上げるか、空きスロットを増やしてみて'
-            : (depth > 0
-              ? '最短は ' + depth + ' 手で、指定した長さ（' + minLen + '〜' + maxLen + ' 手）では解けないよ。基準を上げてみて'
-              : '今の設定では解が無いよ。使う回転やスロット設定を見直してみて');
-        } else {
-          $('searchInfo').textContent = (liveRes && liveRes.capped)
-            ? '探索の上限（' + capText(maxNodes) + '）に達して、解が見つからなかったよ' + (liveRes.cappedAt != null ? '（' + liveRes.cappedAt + '手の探索の途中で打ち切り）' : '（最短を探す段階で打ち切り）') + '。使う回転を増やすか、空きスロットを増やしてみて'
+          if (cappedLens.length) setInfo('', '探索の上限（' + capText(maxNodes) + '）に達して、指定した長さ（' + minLen + '〜' + maxLen + ' 手）の解は確認できなかったよ（解が無いのではなく、探し切れていない）。上限を上げるか、空きスロットを増やしてみて');
+          else $('searchInfo').textContent = depth > 0
+            ? '最短は ' + depth + ' 手で、指定した長さ（' + minLen + '〜' + maxLen + ' 手）では解けないよ。基準を上げてみて'
             : '今の設定では解が無いよ。使う回転やスロット設定を見直してみて';
+        } else {
+          if (liveRes && liveRes.capped) setInfo('', '探索の上限（' + capText(maxNodes) + '）に達して、解が見つからなかったよ' + (liveRes.cappedAt != null ? '（' + liveRes.cappedAt + '手の探索の途中で打ち切り）' : '（最短を探す段階で打ち切り）') + '。使う回転を増やすか、空きスロットを増やしてみて');
+          else $('searchInfo').textContent = '今の設定では解が無いよ。使う回転やスロット設定を見直してみて';
         }
         return;
       }
-      let note;
+      let note, warn;
       if (dbHit) {
         if (!dbHit.missing.length) {
           note = '最短 ' + depth + ' 手（' + minLen + '〜' + maxLen + ' 手の解を収集） の候補 ' + scored.length + ' 件（回しやすい順） ※事前計算DBから表示';
         } else {
           note = '最短 ' + depth + ' 手（' + minLen + '〜' + maxLen + ' 手の解を収集） の候補 ' + scored.length + ' 件（回しやすい順） ※DB＋実検索の混合（実検索した長さ： ' + dbHit.missing.join('・') + '手）';
-          if (cappedLens.length) note += ' ※' + cappedLens.join('・') + '手は探索上限（' + capText(maxNodes) + '）で打ち切りのため未確認';
+          if (cappedLens.length) warn = ' ※' + cappedLens.join('・') + '手は探索上限（' + capText(maxNodes) + '）で打ち切りのため未確認';
         }
       } else {
         note = '最短 ' + depth + ' 手（' + minLen + '〜' + maxLen + ' 手の解を収集） の候補 ' + scored.length + ' 件（回しやすい順）' + (scored.length > 30 ? ' ※表示は上位30件' : '');
         if (liveRes && liveRes.capped) {
           const done = liveRes.completedDepths || [];
-          note += ' ※探索上限（' + capText(maxNodes) + '）で打ち切り（' + (done.length ? done.join('・') + '手は完了、' : '') + (liveRes.cappedAt != null ? liveRes.cappedAt + '手の途中で打ち切り' : '') + (liveRes.cappedAt != null && liveRes.cappedAt < maxLen ? '、' + (liveRes.cappedAt + 1) + '〜' + maxLen + '手は未実施' : '') + '）';
+          warn = ' ※探索上限（' + capText(maxNodes) + '）で打ち切り（' + (done.length ? done.join('・') + '手は完了、' : '') + (liveRes.cappedAt != null ? liveRes.cappedAt + '手の途中で打ち切り' : '') + (liveRes.cappedAt != null && liveRes.cappedAt < maxLen ? '、' + (liveRes.cappedAt + 1) + '〜' + maxLen + '手は未実施' : '') + '）';
         } else if (liveRes && liveRes.stoppedAtMax) {
           note += ' ※候補が上限件数に達したので ' + Math.max(...(liveRes.completedDepths || [0])) + '手までで終了';
         }
       }
-      renderNow(note);
+      renderNow(note, warn);
     };
     const cappedLens = [];
     let jobIdx = 0;
