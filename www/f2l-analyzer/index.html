@@ -1390,10 +1390,12 @@ function doSearch(explicitWin) {
     const capIdx = parseInt($('capRange').value, 10);
     const maxNodes = CAP_STEPS[isNaN(capIdx) ? 2 : capIdx] ?? 1200000;
     const dbHit = lookupPairDBFull(cur, target, [...preserve], [...enabledFams], minLen, maxLen);
-    // wide が有効なとき DB の「探し終わった長さ」は信用できない（wide の解が残っているかもしれない）。
-    // DB の解は取り込みつつ、窓の長さは全部 実検索する。最短も wide 込みの値を実検索から取る
+    // DB は「6面全部ON」で作った資産。使う回転を1つでも絞っていたら（wide 解禁も含む）、
+    // DB の「探し終わった長さ」は信用できない（絞った条件ではまだ探していない）。
+    // DB の解は取り込みつつ、窓の長さは全部 実検索する。最短も絞った条件の値を実検索から取る
     const wideOn = [...enabledFams].some(f => WIDE_FAMS.includes(f));
-    if (dbHit && wideOn) { dbHit.missing = []; for (let L = minLen; L <= maxLen; L++) dbHit.missing.push(L); }
+    const dbTrust = !wideOn && FACE_FAMS.every(f => enabledFams.has(f));
+    if (dbHit && !dbTrust) { dbHit.missing = []; for (let L = minLen; L <= maxLen; L++) dbHit.missing.push(L); }
     const seen = new Set();
     const scored = [];
     const pushToks = (toks) => {
@@ -1406,7 +1408,7 @@ function doSearch(explicitWin) {
     const jobs = [];
     if (dbHit) { for (const L of dbHit.missing) jobs.push({ minLen: L, maxLen: L, label: L }); }
     else jobs.push({ minLen, maxLen, label: null });
-    let depth = (dbHit && !wideOn) ? dbHit.depth : -1;
+    let depth = (dbHit && dbTrust) ? dbHit.depth : -1;
     let cancelled = false;
     let curLabel = null;
     let curNodes = 0;
