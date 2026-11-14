@@ -1016,7 +1016,7 @@ function renderSlotControls() {
     b.textContent = name;
     b.className = 'chip' + (target === name ? ' on' : '');
     b.disabled = uiLock;
-    b.onclick = () => { target = name; preserve.delete(name); rebuildBase(true); };
+    b.onclick = () => { target = name; preserve.delete(name); rebuildBase(false); }; // 対象を変えたらペアは未配置に戻す（最初に開いたときの FR と同じく、対象スロットは黒）
     t.appendChild(b);
   }
   const s = $('slotRow');
