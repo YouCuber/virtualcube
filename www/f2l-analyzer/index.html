@@ -681,6 +681,7 @@ const SLOT_NAMES = ['FR', 'FL', 'BR', 'BL'];
 let cur = SOLVED.slice();
 let target = 'FR';
 let preserve = new Set(['FL', 'BR', 'BL']);
+let targetPrevKeep = true; // 対象スロットが「対象になる直前」に保持だったか。対象を外れたらここに戻す
 let enabledFams = new Set(FACE_FAMS);
 let crossPaint = 3; // クロス面のペイント（既定は白=3）
 let viewRX = -24, viewRY = -32;
@@ -1016,7 +1017,14 @@ function renderSlotControls() {
     b.textContent = name;
     b.className = 'chip' + (target === name ? ' on' : '');
     b.disabled = uiLock;
-    b.onclick = () => { target = name; preserve.delete(name); rebuildBase(false); }; // 対象を変えたらペアは未配置に戻す（最初に開いたときの FR と同じく、対象スロットは黒）
+    b.onclick = () => {
+      // 前の対象は「対象になる直前の保持/空き」に戻す（対象を押すたびに空きが増えるのを防ぐ）
+      if (targetPrevKeep) preserve.add(target); else preserve.delete(target);
+      targetPrevKeep = preserve.has(name);
+      preserve.delete(name);
+      target = name;
+      rebuildBase(false); // 対象を変えたらペアは未配置に戻す（最初に開いたときの FR と同じく、対象スロットは黒）
+    };
     t.appendChild(b);
   }
   const s = $('slotRow');
