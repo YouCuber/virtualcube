@@ -51,6 +51,9 @@
   #searchInfo { margin-top:10px; color:#c5cae9; }
   .capwarn { color:#ff5252; font-weight:700; }
   .doneBanner { margin-top:10px; padding:10px; border-radius:8px; background:#1b5e20; color:#fff; font-size:20px; font-weight:800; text-align:center; letter-spacing:0.2em; }
+  /* 下へ移動ボタンは、パネルが縦に積まれる狭い画面（スマホ）だけ出す。PCの横並びでは不要 */
+  #downBtn { display:none; }
+  @media (max-width: 900px) { #downBtn { display:inline-block; } }
   #stdPanel { margin-top:10px; padding:10px; border:1px solid #ffd54a; border-radius:8px; background:#2a2410; }
   #stdPanel .std-title { color:#ffd54a; font-weight:bold; margin-bottom:4px; }
   #stdPanel .std-btns { margin-top:8px; display:flex; gap:8px; flex-wrap:wrap; }
@@ -80,8 +83,9 @@
   <div class="cols">
     <div class="panel grow">
       <div id="statusLine" class="status"></div>
+      <p class="note"><button id="downBtn">↓ 下へ移動</button></p>
       <div class="scene" id="scene"></div>
-      <p class="note">ドラッグでキューブを回せるよ（裏側も見える）。 <button id="camResetBtn">カメラを戻す</button> <button id="downBtn">↓ 下へ移動</button></p>
+      <p class="note">ドラッグでキューブを回せるよ（裏側も見える）。 <button id="camResetBtn">カメラを戻す</button></p>
       <div id="refBox" class="ref"></div>
       <h3 id="setupTop">セットアップ</h3>
       <div class="groupName">1. クロス面（下にする面）</div>
