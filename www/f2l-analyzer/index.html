@@ -51,6 +51,8 @@
   #searchInfo { margin-top:10px; color:#c5cae9; }
   .capwarn { color:#ff5252; font-weight:700; }
   .doneBanner { margin-top:10px; padding:10px; border-radius:8px; background:#1b5e20; color:#fff; font-size:20px; font-weight:800; text-align:center; letter-spacing:0.2em; }
+  .searchingBanner { margin-top:10px; padding:10px; border-radius:8px; background:#4d1010; color:#ff6b6b; font-size:20px; font-weight:800; text-align:center; letter-spacing:0.2em; animation: blinkAnim 1.1s ease-in-out infinite; }
+  @keyframes blinkAnim { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
   /* 下へ移動ボタンは、パネルが縦に積まれる狭い画面（スマホ）だけ出す。PCの横並びでは不要 */
   #downBtn { display:none; }
   @media (max-width: 900px) { #downBtn { display:inline-block; } }
@@ -136,6 +138,7 @@
       <button id="cancelBtn" style="display:none">中断</button>
       <div id="stdPanel" style="display:none"></div>
       <div id="shortPanel" style="display:none"></div>
+      <div id="searchingBanner" class="searchingBanner" style="display:none">手順検索中・・・</div>
       <div id="doneBanner" class="doneBanner" style="display:none">検索終了</div>
       <div id="searchInfo"></div>
       <div id="results"></div>
@@ -1395,6 +1398,8 @@ function setUiLock(v) {
 // 探索
 function showDoneBanner(txt, bg) { const b = $('doneBanner'); if (!b) return; b.textContent = txt; b.style.background = bg || ''; b.style.display = ''; }
 function hideDoneBanner() { const b = $('doneBanner'); if (b) b.style.display = 'none'; }
+function showSearchingBanner() { const b = $('searchingBanner'); if (b) b.style.display = ''; }
+function hideSearchingBanner() { const b = $('searchingBanner'); if (b) b.style.display = 'none'; }
 function doSearch(explicitWin) {
   resetCam(); // どのボタンから始まった検索でも、カメラは正面に戻す（あっぱー要望 2026-11-14）
   hideDoneBanner(); // 前回の「検索終了」は消してから始める
@@ -1458,19 +1463,24 @@ function doSearch(explicitWin) {
     };
     const sortScored = () => scored.sort((a, b) => (a.mcc.score - b.mcc.score) || (a.met.htm - b.met.htm));
     const renderNow = (infoText, warnText) => { sortScored(); $('results').innerHTML = ''; renderScored(scored, infoText, warnText); };
-    const statusText = () => {
-      const base = depth > 0 ? '最短 ' + depth + ' 手の候補を探し中…' : '探索中…';
-      const prog = curLabel != null ? '（実検索： ' + curLabel + '手／試した候補 ' + fmtNodes(curNodes) + '）' : '（試した候補 ' + fmtNodes(curNodes) + '）';
-      return base + prog + ' いま ' + scored.length + ' 件（回しやすい順）';
+    const renderProgress = () => {
+      sortScored();
+      $('results').innerHTML = '';
+      renderScored(scored, '', null);
+      const line2 = curLabel != null
+        ? '実検索中： ' + curLabel + '手／試した手順 ' + fmtNodes(curNodes)
+        : '実検索中： 試した手順 ' + fmtNodes(curNodes);
+      $('searchInfo').innerHTML = '<div>' + line2 + '</div><div>発見した手順 ' + scored.length + ' 件（回しやすい順）</div>';
     };
     let renderTimer = null;
     const scheduleRender = () => {
       if (renderTimer) return;
-      renderTimer = setTimeout(() => { renderTimer = null; if (!cancelled) renderNow(statusText()); }, 250);
+      renderTimer = setTimeout(() => { renderTimer = null; if (!cancelled) renderProgress(); }, 250);
     };
     const finishUI = () => {
       btn.disabled = false;
       setUiLock(false);
+      hideSearchingBanner();
       if (cancelBtn) cancelBtn.style.display = 'none';
       if (activeRun === run) activeRun = null;
     };
@@ -1565,6 +1575,7 @@ function doSearch(explicitWin) {
       showDoneBanner('検索終了');
       finishUI(); activeRun = null; return;
     }
+    showSearchingBanner(); // 実検索があるときだけ点滅バナーを出す（あっぱー要望 2026-11-15）
     nextJob();
   } catch (e) { $('searchInfo').textContent = 'エラー: ' + e.message; btn.disabled = false; setUiLock(false); if (cancelBtn) cancelBtn.style.display = 'none'; } }, 30);
 }
