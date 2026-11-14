@@ -112,7 +112,7 @@
       <h3>集める解の長さ</h3>
       <div class="row">
         <span>基準</span>
-        <input type="range" id="baseRange" min="4" max="16" step="1" value="7">
+        <input type="range" id="baseRange" min="3" max="20" step="1" value="7">
         <span id="baseVal">7手</span>
       </div>
       <div class="row">
@@ -1212,7 +1212,7 @@ function renderStdPanel(std) {
     b.onclick = () => {
       const L = std.len - parseInt(b.dataset.d, 10);
       if (L < 1) return;
-      if (L >= 4 && L <= 16) { $('baseRange').value = L; $('minusRange').value = 0; $('plusRange').value = 0; updWindow(); }
+      if (L >= 3 && L <= 20) { $('baseRange').value = L; $('minusRange').value = 0; $('plusRange').value = 0; updWindow(); }
       doSearch({ minLen: L, maxLen: L });
     };
   });
@@ -1251,7 +1251,7 @@ function renderShortPanel(sp) {
   panel.querySelectorAll('button').forEach(b => {
     b.onclick = () => {
       const L = sp.depth + parseInt(b.dataset.p, 10);
-      if (L >= 4 && L <= 16) { $('baseRange').value = L; $('minusRange').value = 0; $('plusRange').value = 0; updWindow(); }
+      if (L >= 3 && L <= 20) { $('baseRange').value = L; $('minusRange').value = 0; $('plusRange').value = 0; updWindow(); }
       doSearch({ minLen: L, maxLen: L });
     };
   });
