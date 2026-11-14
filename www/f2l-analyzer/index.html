@@ -1623,8 +1623,18 @@ window.addEventListener('DOMContentLoaded', () => {
     // セットアップで引き出せない。かける前にペアを定位置に色付きで置く
     // （2026-11-14 あっぱー報告: リロード直後は逆セットアップできず、完成状態に戻すと動く）
     const pair = findPair();
-    if (!pair.corner) cur = placeCorner(cur, CORNER_IDX.get(vkey(SLOTS[target].corner)), pair.cHome, 0);
-    if (!pair.edge) cur = placeEdge(cur, EDGE_IDX.get(vkey(SLOTS[target].edge)), pair.eHome, 0);
+    // 置く向きは「今の握りで完成になる向き」を探す。twist 0 は配色基準の向きで、
+    // 赤クロス等ではクロス色が下を向かず、ねじれた状態でセットアップが始まってしまう
+    if (!pair.corner) {
+      const pos = CORNER_IDX.get(vkey(SLOTS[target].corner));
+      cur = placeCorner(cur, pos, pair.cHome, 0);
+      for (let tw = 1; tw < 3; tw++) { const cand = placeCorner(cur, pos, pair.cHome, tw); if (cornerSolvedAt(cand, SLOTS[target].corner)) { cur = cand; break; } }
+    }
+    if (!pair.edge) {
+      const pos = EDGE_IDX.get(vkey(SLOTS[target].edge));
+      cur = placeEdge(cur, pos, pair.eHome, 0);
+      if (!edgeSolvedAt(cur, SLOTS[target].edge)) { const cand = placeEdge(cur, pos, pair.eHome, 1); if (edgeSolvedAt(cand, SLOTS[target].edge)) cur = cand; }
+    }
     cur = maskBySets(applyAlg(cur, alg), coloredSets(cur));
     render();
   };
