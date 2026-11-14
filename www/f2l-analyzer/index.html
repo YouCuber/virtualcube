@@ -83,14 +83,13 @@
       <div class="groupName">3. ペアを置く</div>
       <div id="pairPalette" class="row"></div>
       <div class="row"><button id="setupBtn">セットアップをやり直す（クロスと保持スロットを埋めて、他は黒に）</button></div>
-      <h3>状態を作る（手順・ボタンでも作れる）</h3>
+      <h3>状態を作る（手順を入力）</h3>
       <div class="row">
         <input id="algInput" placeholder="手順を入力 例: R U' R'">
         <button id="applyAlgBtn">適用</button>
         <button id="applyInvBtn">逆手順で適用</button>
         <button id="resetBtn">完成状態に戻す</button>
       </div>
-      <div id="moveGroups"></div>
     </div>
     <div class="panel side">
       <h3>対象スロット</h3>
@@ -1008,36 +1007,6 @@ function renderSlotControls() {
   }
 }
 
-// 回転ボタン
-function buildMoveButtons() {
-  const groups = [
-    ['基本', ['U', 'D', 'R', 'L', 'F', 'B']],
-    ['スライス', ['M', 'E', 'S']],
-    ['wide', ['r', 'l', 'u', 'd', 'f', 'b']],
-    ['持ち替え', ['x', 'y', 'z']],
-  ];
-  const host = $('moveGroups');
-  for (const [gname, fams] of groups) {
-    const h = document.createElement('div');
-    h.className = 'groupName';
-    h.textContent = gname;
-    host.appendChild(h);
-    const row = document.createElement('div');
-    row.className = 'row';
-    for (const fam of fams) {
-      for (const mod of [1, 2, 3]) {
-        const b = document.createElement('button');
-        b.className = 'mv';
-        b.textContent = tokenStr({ fam, mod });
-        b.onclick = () => { cur = applyToken(cur, { fam, mod }); render(); };
-        row.appendChild(b);
-      }
-    }
-    host.appendChild(row);
-  }
-}
-
-
 // 型ハイライト付き手順HTML
 function patClass(name) {
   if (name.includes('Sune')) return 'pat pat-sune';
@@ -1461,7 +1430,6 @@ function doAnalyze() {
 
 window.addEventListener('DOMContentLoaded', () => {
   buildCube();
-  buildMoveButtons();
   $('searchBtn').onclick = () => doSearch();
   $('cancelBtn').onclick = () => { if (activeRun) activeRun.cancel(); };
   $('capRange').oninput = () => {
