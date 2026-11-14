@@ -1126,6 +1126,38 @@ function lookupPairDB(state, targetName, preserveList, fams, minLen, maxLen) {
   if (!toksList.length) return null; // 窓や回転設定で絞られて空なら従来探索へ
   return { depth: entry.depth, toksList };
 }
+// DBが「知っている」長さの集合：解が入っている長さ＋補足で探済みの長さ＋（完走した収集範囲は最短〜+2）＋最短より短い長さ
+function dbKnownLengths(entry) {
+  const known = new Set();
+  for (const s of entry.sols) known.add(s.htm);
+  for (const key of Object.keys(entry)) {
+    if (key.startsWith('supp')) { const L = parseInt(key.slice(4), 10); if (!isNaN(L)) known.add(L); }
+  }
+  if (entry.depth > 0) {
+    for (let L = 0; L < entry.depth; L++) known.add(L);
+    if (!entry.capped) for (let L = entry.depth; L <= entry.depth + 2; L++) known.add(L);
+  }
+  return known;
+}
+// DBヒット時に、窓の中でDBが知らない長さ（missing）も一緒に返す
+function lookupPairDBFull(state, targetName, preserveList, fams, minLen, maxLen) {
+  if (!Object.keys(PAIR_DB).length) return null;
+  const got = dbKeyFor(state, targetName, preserveList);
+  if (!got) return null;
+  const entry = PAIR_DB[got.key];
+  if (!entry) return null;
+  const toksList = [];
+  for (const s of entry.sols) {
+    if (s.htm < minLen || s.htm > maxLen) continue;
+    const toks = rotToksY(parseAlg(s.alg), -got.k);
+    if (!toks.every(t => fams.includes(t.fam))) continue;
+    toksList.push(toks);
+  }
+  const known = dbKnownLengths(entry);
+  const missing = [];
+  for (let L = Math.max(0, minLen); L <= maxLen; L++) if (!known.has(L)) missing.push(L);
+  return { depth: entry.depth, toksList, missing };
+}
 // 模範解答（公開標準手順の注釈）を引く。ヒットすれば { n, std（ユーザー視点）, len }
 const FACE_ROT_Y_ALL = { R: 'F', F: 'L', L: 'B', B: 'R', U: 'U', D: 'D', r: 'f', f: 'l', l: 'b', b: 'r', u: 'u', d: 'd' };
 function rotStdY(toks, k) {
@@ -1181,6 +1213,16 @@ function renderScored(scored, infoText) {
   }
 }
 
+function updWindow() {
+  const b = parseInt($('baseRange').value, 10) || 7;
+  const mn = parseInt($('minusRange').value, 10) || 0;
+  const pl = parseInt($('plusRange').value, 10) || 0;
+  $('baseVal').textContent = b + '手';
+  $('minusVal').textContent = '−' + mn + '手';
+  $('plusVal').textContent = '＋' + pl + '手';
+  $('windowNote').textContent = '集める長さ：' + Math.max(0, b - mn) + '〜' + (b + pl) + '手。一般的な手順の手数を基準にして、そこから何手短い解・長い解まで集めるか指定するよ。最短より長い長さだけを指定すると、探索に時間がかかることがあるよ。';
+}
+
 // 探索
 function doSearch(explicitWin) {
   const btn = $('searchBtn');
@@ -1200,15 +1242,46 @@ function doSearch(explicitWin) {
       const plus = parseInt($('plusRange').value, 10) || 0;
       const minLen = explicitWin ? explicitWin.minLen : Math.max(0, baseLen - minus);
       const maxLen = explicitWin ? explicitWin.maxLen : baseLen + plus;
-      const dbHit = lookupPairDB(cur, target, [...preserve], [...enabledFams], minLen, maxLen);
-      if (dbHit) {
-        const scored = dbHit.toksList.map(toks => ({ toks, str: algStr(toks), met: countMetrics(toks), mcc: mccScore(toks) }));
-        scored.sort((a, b) => (a.mcc.score - b.mcc.score) || (a.met.htm - b.met.htm));
-        renderScored(scored, '最短 ' + dbHit.depth + ' 手（' + minLen + '〜' + maxLen + ' 手の解を収集） の候補 ' + scored.length + ' 件（回しやすい順） ※事前計算DBから表示');
-        return;
-      }
       const CAP_STEPS = [300000, 600000, 1200000, 3000000, 6000000, 12000000];
       const maxNodes = CAP_STEPS[parseInt($('capRange').value, 10) || 2] || 1200000;
+      const dbHit = lookupPairDBFull(cur, target, [...preserve], [...enabledFams], minLen, maxLen);
+      if (dbHit) {
+        // DBの解＋（窓の中でDBが知らない長さは1つずつ実検索して）混ぜて、MCC順に並べる。
+        // ある長さが上限で打ち切られても、残りの長さはあきらめずに探す（+方向に安い解が隠れているかもしれないため）
+        const seen = new Set();
+        const scored = [];
+        const pushToks = (toks) => {
+          const str = algStr(toks);
+          if (seen.has(str)) return;
+          seen.add(str);
+          scored.push({ toks, str, met: countMetrics(toks), mcc: mccScore(toks) });
+        };
+        dbHit.toksList.forEach(pushToks);
+        const cappedLens = [];
+        for (const L of dbHit.missing) {
+          const r = solvePair(cur, target, [...preserve], [...enabledFams], { maxNodes, maxSolutions: 300, minLen: L, maxLen: L });
+          (r.solutions || []).forEach(pushToks);
+          if (r.capped) cappedLens.push(L);
+        }
+        scored.sort((a, b) => (a.mcc.score - b.mcc.score) || (a.met.htm - b.met.htm));
+        if (!scored.length) {
+          $('searchInfo').textContent = cappedLens.length
+            ? '探索の上限に達して、指定した長さ（' + minLen + '〜' + maxLen + ' 手）の解は確認できなかったよ（解が無いのではなく、探し切れていない）。上限を上げるか、空きスロットを増やしてみて'
+            : (dbHit.depth > 0
+              ? '最短は ' + dbHit.depth + ' 手で、指定した長さ（' + minLen + '〜' + maxLen + ' 手）では解けないよ。基準を上げてみて'
+              : '今の設定では解が無いよ。使う回転やスロット設定を見直してみて');
+          return;
+        }
+        let note;
+        if (!dbHit.missing.length) {
+          note = '最短 ' + dbHit.depth + ' 手（' + minLen + '〜' + maxLen + ' 手の解を収集） の候補 ' + scored.length + ' 件（回しやすい順） ※事前計算DBから表示';
+        } else {
+          note = '最短 ' + dbHit.depth + ' 手（' + minLen + '〜' + maxLen + ' 手の解を収集） の候補 ' + scored.length + ' 件（回しやすい順） ※DB＋実検索の混合（実検索した長さ： ' + dbHit.missing.join('・') + '手）';
+          if (cappedLens.length) note += ' ※' + cappedLens.join('・') + '手は探索上限で打ち切りのため未確認';
+        }
+        renderScored(scored, note);
+        return;
+      }
       const res = solvePair(cur, target, [...preserve], [...enabledFams], { maxNodes, maxSolutions: 300, minLen, maxLen });
       if (res.depth === 0) {
         $('searchInfo').textContent = 'すでに目標達成だよ';
@@ -1271,15 +1344,6 @@ window.addEventListener('DOMContentLoaded', () => {
   buildCube();
   buildMoveButtons();
   $('searchBtn').onclick = () => doSearch();
-  const updWindow = () => {
-    const b = parseInt($('baseRange').value, 10) || 7;
-    const mn = parseInt($('minusRange').value, 10) || 0;
-    const pl = parseInt($('plusRange').value, 10) || 0;
-    $('baseVal').textContent = b + '手';
-    $('minusVal').textContent = '−' + mn + '手';
-    $('plusVal').textContent = '＋' + pl + '手';
-    $('windowNote').textContent = '集める長さ：' + Math.max(0, b - mn) + '〜' + (b + pl) + '手。一般的な手順の手数を基準にして、そこから何手短い解・長い解まで集めるか指定するよ。最短より長い長さだけを指定すると、探索に時間がかかることがあるよ。';
-  };
   $('capRange').oninput = () => {
     const LABELS = ['30万手まで', '60万手まで', '120万手まで', '300万手まで', '600万手まで', '1200万手まで'];
     $('capVal').textContent = LABELS[parseInt($('capRange').value, 10) || 2] || LABELS[2];
