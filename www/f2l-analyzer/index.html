@@ -81,9 +81,9 @@
     <div class="panel grow">
       <div id="statusLine" class="status"></div>
       <div class="scene" id="scene"></div>
-      <p class="note">ドラッグでキューブを回せるよ（裏側も見える）。 <button id="camResetBtn">カメラを戻す</button></p>
+      <p class="note">ドラッグでキューブを回せるよ（裏側も見える）。 <button id="camResetBtn">カメラを戻す</button> <button id="downBtn">↓ 下へ移動</button></p>
       <div id="refBox" class="ref"></div>
-      <h3>セットアップ</h3>
+      <h3 id="setupTop">セットアップ</h3>
       <div class="groupName">1. クロス面（下にする面）</div>
       <div id="crossRow" class="row"></div>
       <div class="groupName">2. 対象スロットと、他のスロットの保持／空き（右のパネルで指定）</div>
@@ -1648,6 +1648,8 @@ window.addEventListener('DOMContentLoaded', () => {
   $('applyAlgBtn').onclick = () => { try { applyAndMask($('algInput').value); } catch (e) { alert(e.message); } };
   $('applyInvBtn').onclick = () => { try { applyAndMask(invertAlgStr($('algInput').value)); } catch (e) { alert(e.message); } };
   $('camResetBtn').onclick = () => resetCam();
+  // スマホではキューブが画面いっぱいで、スクロールのつもりが回転になってしまうため（あっぱー要望 2026-11-14）
+  $('downBtn').onclick = () => { const el = $('setupTop'); if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
   rebuildBase(false);
   // 距離表を先に作っておく（最初の探索がスマホで遅くならないように）
   setTimeout(() => { try { for (const n of SLOT_NAMES) { getPairDist(n); getPairDist(n, true); } getCrossDist(); getCrossDist(true); } catch (e) { /* 失敗しても探索時に作る */ } }, 300);
