@@ -1617,7 +1617,16 @@ window.addEventListener('DOMContentLoaded', () => {
     run(CORNER_INFO, sets.sc); run(EDGE_INFO, sets.se);
     return out;
   };
-  const applyAndMask = alg => { cur = maskBySets(applyAlg(cur, alg), coloredSets(cur)); render(); };
+  const applyAndMask = alg => {
+    // 対象ペアが未配置（黒）のままだと、ステッカーの色そのものが無いので
+    // セットアップで引き出せない。かける前にペアを定位置に色付きで置く
+    // （2026-11-14 あっぱー報告: リロード直後は逆セットアップできず、完成状態に戻すと動く）
+    const pair = findPair();
+    if (!pair.corner) cur = placeCorner(cur, CORNER_IDX.get(vkey(SLOTS[target].corner)), pair.cHome, 0);
+    if (!pair.edge) cur = placeEdge(cur, EDGE_IDX.get(vkey(SLOTS[target].edge)), pair.eHome, 0);
+    cur = maskBySets(applyAlg(cur, alg), coloredSets(cur));
+    render();
+  };
   $('applyAlgBtn').onclick = () => { try { applyAndMask($('algInput').value); } catch (e) { alert(e.message); } };
   $('applyInvBtn').onclick = () => { try { applyAndMask(invertAlgStr($('algInput').value)); } catch (e) { alert(e.message); } };
   $('camResetBtn').onclick = () => resetCam();
