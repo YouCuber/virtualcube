@@ -86,7 +86,6 @@
       <p class="note"><button id="downBtn">↓ 下へ移動</button></p>
       <div class="scene" id="scene"></div>
       <p class="note">ドラッグでキューブを回せるよ（裏側も見える）。 <button id="camResetBtn">カメラを戻す</button></p>
-      <div id="refBox" class="ref"></div>
       <h3 id="setupTop">セットアップ</h3>
       <div class="groupName">1. クロス面（下にする面）</div>
       <div id="crossRow" class="row"></div>
@@ -967,30 +966,9 @@ function render() {
       (pair.corner ? '' : 'コーナーが未配置。') + (pair.edge ? '' : 'エッジが未配置。');
     st.className = 'status';
   } else { st.textContent = '目標は未達成'; st.className = 'status'; }
-  renderRef();
   renderSlotControls();
   renderSetup();
 }
-function renderRef() {
-  const pair = findPair();
-  if (!pair.corner || !pair.edge) { $('refBox').textContent = '参考（ペア単体）: ペアを配置すると表示するよ'; return; }
-  const ps = pairStateOf(cur, target);
-  if (ps.c < 0 || ps.e < 0) { $('refBox').textContent = '参考（ペア単体）: センターが動いた形では表示できないよ'; return; }
-  const stats = pairDistStats(target);
-  const ePos = EDGE_POS[Math.floor(ps.e / 2)];
-  const inD = CROSS_POS.some(p => vkey(p) === vkey(ePos));
-  let html = '参考（ペア単体）: 最短 ' + ps.dist + ' 手';
-  if (!inD) {
-    const cnt = stats.counts[ps.dist] || 0;
-    if (cnt > 0 && cnt < stats.total) {
-      html += ' ／ 最短' + ps.dist + '手の状態は ' + stats.total + ' 通り中 ' + cnt + ' 個（約 ' + Math.round(stats.total / cnt) + ' 分の 1）';
-    }
-  } else {
-    html += ' ／ エッジがD層にあるので384通りの数え方の外';
-  }
-  $('refBox').textContent = html;
-}
-
 // ---------- セットアップUI ----------
 function dots(paints) {
   return paints.map(p => '<span class="dot" style="background:' + PAINT_COLORS[p] + '"></span>').join('');
