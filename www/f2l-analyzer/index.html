@@ -1515,6 +1515,7 @@ function doSearch(explicitWin) {
         } else {
           note = '最短 ' + depth + ' 手（' + minLen + '〜' + maxLen + ' 手の解を収集） の候補 ' + scored.length + ' 件（回しやすい順） ※DB＋実検索の混合（実検索した長さ： ' + dbHit.missing.join('・') + '手）';
           if (cappedLens.length) warn = ' ※' + cappedLens.join('・') + '手は探索上限（' + capText(maxNodes) + '）で打ち切りのため未確認';
+          if (maxedLens.length) warn = (warn || '') + ' ※' + maxedLens.join('・') + '手は候補の上限（3000件）で打ち止めのため、安い手順が漏れていることがある';
         }
       } else {
         note = '最短 ' + depth + ' 手（' + minLen + '〜' + maxLen + ' 手の解を収集） の候補 ' + scored.length + ' 件（回しやすい順）' + (scored.length > 30 ? ' ※表示は上位30件' : '');
@@ -1528,6 +1529,7 @@ function doSearch(explicitWin) {
       renderNow(note, warn);
     };
     const cappedLens = [];
+    const maxedLens = [];
     let jobIdx = 0;
     let currentHandle = null;
     const run = {
@@ -1555,7 +1557,7 @@ function doSearch(explicitWin) {
           onDone: (res) => {
             currentHandle = null;
             if (res.depth > 0 && depth < 0) depth = res.depth;
-            if (dbHit) { if (res.capped) cappedLens.push(job.label); }
+            if (dbHit) { if (res.capped) cappedLens.push(job.label); if (res.stoppedAtMax) maxedLens.push(job.label); }
             else liveRes = res;
             nextJob();
           },
