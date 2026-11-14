@@ -1369,7 +1369,7 @@ const WORKER_MAIN = [
   "  const d = e.data;",
   "  try {",
   "    const res = solvePair(d.state, d.target, d.preserve, d.fams, {",
-  "      maxNodes: d.maxNodes, maxSolutions: 3000, minLen: d.minLen, maxLen: d.maxLen,",
+  "      maxNodes: d.maxNodes, maxSolutions: 30, minLen: d.minLen, maxLen: d.maxLen,",
   "      onProgress: function (nodes) { postMessage({ type: 'progress', nodes: nodes }); },",
   "      onSolution: function (toks) { postMessage({ type: 'solution', toks: toks }); },",
   "      onEvict: function (toks) { postMessage({ type: 'evict', toks: toks }); }",
@@ -1399,7 +1399,7 @@ function runSearchJob(job, hooks) {
   const w = getSearchWorker();
   if (!w) {
     try {
-      const res = solvePair(job.state, job.target, job.preserve, job.fams, { maxNodes: job.maxNodes, maxSolutions: 3000, minLen: job.minLen, maxLen: job.maxLen, onSolution: hooks.onSolution, onEvict: hooks.onEvict });
+      const res = solvePair(job.state, job.target, job.preserve, job.fams, { maxNodes: job.maxNodes, maxSolutions: 30, minLen: job.minLen, maxLen: job.maxLen, onSolution: hooks.onSolution, onEvict: hooks.onEvict });
       hooks.onDone({ depth: res.depth, capped: !!res.capped, cappedAt: res.cappedAt, completedDepths: res.completedDepths || [], stoppedAtMax: !!res.stoppedAtMax, windowMiss: !!res.windowMiss, impossible: !!res.impossible, count: (res.solutions || []).length });
     } catch (e) { hooks.onError(e.message); }
     return { cancel: function () { /* 同期実行中は中断不可 */ } };
@@ -1493,7 +1493,7 @@ function doSearch(explicitWin) {
     };
     if (dbHit) dbHit.toksList.forEach(pushToks);
     const jobs = [];
-    if (dbHit) { for (const L of dbHit.missing) jobs.push({ minLen: L, maxLen: L, label: L }); }
+    if (dbHit) { for (let L = minLen; L <= maxLen; L++) jobs.push({ minLen: L, maxLen: L, label: L }); } // DBの候補は最初から表示し、窓の全長は常時実検索して混ぜる
     else jobs.push({ minLen, maxLen, label: null });
     let depth = (dbHit && dbTrust) ? dbHit.depth : -1;
     let cancelled = false;
@@ -1555,12 +1555,8 @@ function doSearch(explicitWin) {
       }
       let note, warn;
       if (dbHit) {
-        if (!dbHit.missing.length) {
-          note = '最短 ' + depth + ' 手（' + minLen + '〜' + maxLen + ' 手の解を収集） の候補 ' + scored.length + ' 件（回しやすい順） ※事前計算DBから表示';
-        } else {
-          note = '最短 ' + depth + ' 手（' + minLen + '〜' + maxLen + ' 手の解を収集） の候補 ' + scored.length + ' 件（回しやすい順） ※DB＋実検索の混合（実検索した長さ： ' + dbHit.missing.join('・') + '手）';
-          if (cappedLens.length) warn = ' ※' + cappedLens.join('・') + '手は探索上限（' + capText(maxNodes) + '）で打ち切りのため未確認';
-        }
+        note = '最短 ' + depth + ' 手（' + minLen + '〜' + maxLen + ' 手の解を収集） の候補 ' + scored.length + ' 件（回しやすい順） ※DBの候補に全長さの実検索を混ぜて表示';
+        if (cappedLens.length) warn = ' ※' + cappedLens.join('・') + '手は探索上限（' + capText(maxNodes) + '）で打ち切りのため未確認';
       } else {
         note = '最短 ' + depth + ' 手（' + minLen + '〜' + maxLen + ' 手の解を収集） の候補 ' + scored.length + ' 件（回しやすい順）' + (scored.length > 30 ? ' ※表示は上位30件' : '');
         if (liveRes && liveRes.capped) {
