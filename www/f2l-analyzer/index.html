@@ -50,6 +50,7 @@
   .meta { color:#9aa5d6; font-size:13px; margin-top:3px; }
   #searchInfo { margin-top:10px; color:#c5cae9; }
   .capwarn { color:#ff5252; font-weight:700; }
+  .doneBanner { margin-top:10px; padding:10px; border-radius:8px; background:#1b5e20; color:#fff; font-size:20px; font-weight:800; text-align:center; letter-spacing:0.2em; }
   #stdPanel { margin-top:10px; padding:10px; border:1px solid #ffd54a; border-radius:8px; background:#2a2410; }
   #stdPanel .std-title { color:#ffd54a; font-weight:bold; margin-bottom:4px; }
   #stdPanel .std-btns { margin-top:8px; display:flex; gap:8px; flex-wrap:wrap; }
@@ -132,6 +133,7 @@
       <button id="cancelBtn" style="display:none">中断</button>
       <div id="stdPanel" style="display:none"></div>
       <div id="shortPanel" style="display:none"></div>
+      <div id="doneBanner" class="doneBanner" style="display:none">検索終了</div>
       <div id="searchInfo"></div>
       <div id="results"></div>
       <h3>手順アナライザ</h3>
@@ -1403,8 +1405,11 @@ function setUiLock(v) {
 }
 
 // 探索
+function showDoneBanner(txt, bg) { const b = $('doneBanner'); if (!b) return; b.textContent = txt; b.style.background = bg || ''; b.style.display = ''; }
+function hideDoneBanner() { const b = $('doneBanner'); if (b) b.style.display = 'none'; }
 function doSearch(explicitWin) {
   resetCam(); // どのボタンから始まった検索でも、カメラは正面に戻す（あっぱー要望 2026-11-14）
+  hideDoneBanner(); // 前回の「検索終了」は消してから始める
   if (activeRun) { const r = activeRun; activeRun = null; r.cancel(); }
   const btn = $('searchBtn');
   const cancelBtn = $('cancelBtn');
@@ -1478,6 +1483,7 @@ function doSearch(explicitWin) {
     const finalize = () => {
       if (renderTimer) { clearTimeout(renderTimer); renderTimer = null; }
       finishUI();
+      showDoneBanner(cancelled ? '中断' : '検索終了', cancelled ? '#7a4d00' : ''); // 終わったことが一目で分かるように（あっぱー要望 2026-11-14）
       if (cancelled) {
         if (scored.length) renderNow('候補 ' + scored.length + ' 件（回しやすい順） ※中断した（ここまでの結果）');
         else $('searchInfo').textContent = '中断したよ';
@@ -1562,6 +1568,7 @@ function doSearch(explicitWin) {
         ? '最短は ' + depth + ' 手で、指定した長さ（' + minLen + '〜' + maxLen + ' 手）では解けないよ。基準を上げてみて'
         : '今の設定では解が無いよ。使う回転やスロット設定を見直してみて');
       else renderNow('最短 ' + depth + ' 手（' + minLen + '〜' + maxLen + ' 手の解を収集） の候補 ' + scored.length + ' 件（回しやすい順） ※事前計算DBから表示');
+      showDoneBanner('検索終了');
       finishUI(); activeRun = null; return;
     }
     nextJob();
