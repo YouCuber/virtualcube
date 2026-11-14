@@ -1166,6 +1166,8 @@ function renderStdPanel(std) {
     '<button data-d="0">標準の長さだけ探す</button>' +
     '<button data-d="1">−1手だけ探す</button>' +
     '<button data-d="2">−2手だけ探す</button>' +
+    '<button data-d="-1">＋1手だけ探す</button>' +
+    '<button data-d="-2">＋2手だけ探す</button>' +
     '</div>';
   panel.querySelectorAll('button').forEach(b => {
     b.onclick = () => {
