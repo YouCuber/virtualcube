@@ -1168,14 +1168,35 @@ function lookupPairDBFull(state, targetName, preserveList, fams, minLen, maxLen)
   if (!got) return null;
   const entry = PAIR_DB[got.key];
   if (!entry) return null;
-  const toksList = [];
-  for (const s of entry.sols) {
-    if (s.htm < minLen || s.htm > maxLen) continue;
-    const toks = rotToksY(parseAlg(s.alg), -got.k);
-    if (!toks.every(t => fams.includes(t.fam))) continue;
-    toksList.push(toks);
+  // 引き継ぎ: もっと厳しい条件（保持が多い）で解ける手順は、この条件でも解ける。
+  // 同じペアの形で、保持集合がこちらの部分集合でない（＝より多く保持する）エントリの
+  // sols も混ぜる。空きを増やしたら候補が減る、という逆転を防ぐ（あっぱー指摘 2026-11-15）。
+  const entries = [entry];
+  const pm = /^FR\|([^|]*)\|(c\d+t\d+\|e\d+f\d+)$/.exec(got.key);
+  if (pm) {
+    const myPres = new Set(pm[1] ? pm[1].split(',') : []);
+    for (const k2 of Object.keys(PAIR_DB)) {
+      if (k2 === got.key) continue;
+      const m2 = /^FR\|([^|]*)\|(c\d+t\d+\|e\d+f\d+)$/.exec(k2);
+      if (!m2 || m2[2] !== pm[2]) continue;
+      const p2 = new Set(m2[1] ? m2[1].split(',') : []);
+      if (p2.size > myPres.size && [...myPres].every(p => p2.has(p))) entries.push(PAIR_DB[k2]);
+    }
   }
-  const known = dbKnownLengths(entry);
+  const toksList = [];
+  const seenAlg = new Set();
+  const known = new Set();
+  for (const e of entries) {
+    for (const s of e.sols) {
+      if (s.htm < minLen || s.htm > maxLen) continue;
+      if (seenAlg.has(s.alg)) continue;
+      seenAlg.add(s.alg);
+      const toks = rotToksY(parseAlg(s.alg), -got.k);
+      if (!toks.every(t => fams.includes(t.fam))) continue;
+      toksList.push(toks);
+    }
+    for (const L of dbKnownLengths(e)) known.add(L);
+  }
   const missing = [];
   for (let L = Math.max(0, minLen); L <= maxLen; L++) if (!known.has(L)) missing.push(L);
   return { depth: entry.depth, toksList, missing };
