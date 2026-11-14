@@ -1472,7 +1472,7 @@ window.addEventListener('DOMContentLoaded', () => {
   $('plusRange').oninput = updWindow;
   updWindow();
   $('anaBtn').onclick = doAnalyze;
-  $('resetBtn').onclick = () => { cur = SOLVED.slice(); render(); };
+  $('resetBtn').onclick = () => { cur = maskIrrelevant(SOLVED); render(); };
   $('setupBtn').onclick = () => rebuildBase(false);
   $('applyAlgBtn').onclick = () => {
     try { cur = maskIrrelevant(applyAlg(cur, $('algInput').value)); render(); } catch (e) { alert(e.message); }
