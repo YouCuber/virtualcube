@@ -907,8 +907,15 @@ function onCubeClick(ev) {
   if (!t || t.dataset.type === 'center') return;
   const type = t.dataset.type, pos = parseInt(t.dataset.pos, 10);
   const { cHome, eHome } = pairHomes();
-  if (armed === 'corner' && type === 'corner') { cur = placeCorner(cur, pos, cHome, 0); armed = null; render(); return; }
-  if (armed === 'edge' && type === 'edge') { cur = placeEdge(cur, pos, eHome, 0); armed = null; render(); return; }
+  // 置き直すときは、そのピースが今いる場所を先に黒くする（消さずに塗ると同じピースが2か所に増殖する）
+  const erasePiece = (st, kind, home) => {
+    const ex = kind === 'corner' ? extractCorners(st) : extractEdges(st);
+    let out = st;
+    ex.forEach((p, i) => { if (p && p.home === home) out = blackenPos(out, kind, i); });
+    return out;
+  };
+  if (armed === 'corner' && type === 'corner') { cur = placeCorner(erasePiece(cur, 'corner', cHome), pos, cHome, 0); armed = null; render(); return; }
+  if (armed === 'edge' && type === 'edge') { cur = placeEdge(erasePiece(cur, 'edge', eHome), pos, eHome, 0); armed = null; render(); return; }
   // 置いてあるペアをクリック → 向きを変える
   const pair = findPair();
   if (type === 'corner' && pair.corner && pair.corner.pos === pos) {
