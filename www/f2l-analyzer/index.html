@@ -62,6 +62,9 @@
   html, body { overflow-x:hidden; }
   #patBonus { flex:0 0 70px; }
   #patName, #patAlg { min-width:0; }
+  .patForm label { display:block; font-size:12px; color:#9aa5d6; margin:8px 0; }
+  .patForm input { width:100%; margin-top:3px; }
+  .patForm input[type=number] { width:110px; }
   .rank { color:#ffd54a; font-weight:700; font-size:14px; margin-right:8px; }
   .pos { color:#9aa5d6; font-size:13px; }
   #searchInfo { margin-top:10px; color:#c5cae9; }
@@ -155,16 +158,17 @@
       <div id="advPanel" style="display:none">
         <p class="note">数字を上げると、その面を使う手順は順位が下がる。Dが苦手ならDを上げてみて。スライダーは標準のコストから始まるよ。</p>
         <div id="mccPanel"></div>
-        <div class="row"><button id="mccResetBtn">標準のコストに戻す</button></div>
+        <p class="note">スライダーは下書きだよ。「適用する」を押すまで順位には反映されない。</p>
+        <div class="row"><button id="mccApplyBtn">この回しにくさで適用する</button><button id="mccResetBtn">標準のコストに戻す</button></div>
         <h4>型ボーナス</h4>
         <p class="note">型ごとの加点（マイナス）の大きさと有効・無効を変えられるよ。長い型が優先されるので、6手OLLが有効なら、その中のSexyは自動で外れる。自分の型も追加できるよ（型の設定はこの端末に保存される）。</p>
         <div id="patPanel"></div>
-        <div class="row">
-          <input id="patName" placeholder="型の名前">
-          <input id="patAlg" placeholder="手順 例: F R U R' U' F'">
-          <input id="patBonus" type="number" min="0" max="3" step="0.05" value="0.5" style="width:70px">
-          <button id="patAddBtn">型を追加</button>
+        <div class="patForm">
+          <label>型の名前<input id="patName" placeholder="例：Sexy Move"></label>
+          <label>手順<input id="patAlg" placeholder="例： R U R' U'"></label>
+          <label>型ボーナス値<input id="patBonus" type="number" min="0" max="3" step="0.05" value="0.5"></label>
         </div>
+        <div class="row"><button id="patAddBtn">型を追加</button></div>
         <div class="row"><button id="patResetBtn">型の設定を全部標準に戻す</button></div>
       </div>
       <button id="searchBtn" class="big">解を探す</button>
@@ -1535,6 +1539,7 @@ function setUiLock(v) {
   for (const id of ['baseRange', 'minusRange', 'plusRange', 'capRange']) { const el = $(id); if (el) el.disabled = v; }
   for (const el of mccInputs) el.disabled = v;
   for (const el of patInputs) el.disabled = v;
+  for (const id of ['mccApplyBtn', 'mccResetBtn', 'patResetBtn', 'patAddBtn']) { const el = $(id); if (el) el.disabled = v; }
   renderSlotControls();
 }
 
@@ -1551,10 +1556,15 @@ function refreshPanels() {
 
 // アドバンスド設定: MCCコストのスライダー（標準のコストで初期化、あっぱー発案 2026-11-15）
 const MCC_FAMS = ['U', 'D', 'R', 'L', 'F', 'B', 'M', 'E', 'S', 'r', 'l', 'u', 'd', 'f', 'b'];
+function askConfirm() { try { return confirm('本当によろしいですか？'); } catch (e) { return true; } }
 function buildMccPanel() {
   const host = $('mccPanel'); if (!host) return;
   host.innerHTML = '';
   mccInputs.length = 0;
+  const draft = {}; // スライダーは下書き。「適用する」を押すまで MCC には反映しない（誤スライド対策）
+  for (const fam of MCC_FAMS) draft[fam] = [MCC[fam][0], MCC[fam][1]];
+  const ab = $('mccApplyBtn');
+  const markDirty = () => { if (ab) ab.textContent = 'この回しにくさで適用する（変更あり）'; };
   const head = document.createElement('div');
   head.className = 'mccRow';
   head.innerHTML = '<span class="mf"></span><span class="mh">90°</span><span class="mv"></span><span class="mh">180°</span><span class="mv"></span>';
@@ -1567,15 +1577,24 @@ function buildMccPanel() {
     const qv = document.createElement('span'); qv.className = 'mv'; qv.textContent = MCC[fam][0].toFixed(2);
     const h = document.createElement('input'); h.type = 'range'; h.min = '0.5'; h.max = '4.5'; h.step = '0.05'; h.value = MCC[fam][1];
     const hv = document.createElement('span'); hv.className = 'mv'; hv.textContent = MCC[fam][1].toFixed(2);
-    const upd = () => { setMccCost(fam, parseFloat(q.value), parseFloat(h.value)); qv.textContent = parseFloat(q.value).toFixed(2); hv.textContent = parseFloat(h.value).toFixed(2); refreshPanels(); };
+    const upd = () => { draft[fam] = [parseFloat(q.value), parseFloat(h.value)]; qv.textContent = parseFloat(q.value).toFixed(2); hv.textContent = parseFloat(h.value).toFixed(2); markDirty(); };
     q.oninput = upd; h.oninput = upd;
     q.disabled = uiLock; h.disabled = uiLock;
     mccInputs.push(q, h);
     row.appendChild(lab); row.appendChild(q); row.appendChild(qv); row.appendChild(h); row.appendChild(hv);
     host.appendChild(row);
   }
+  if (ab) {
+    ab.textContent = 'この回しにくさで適用する';
+    ab.disabled = uiLock;
+    ab.onclick = () => {
+      for (const fam of MCC_FAMS) setMccCost(fam, draft[fam][0], draft[fam][1]);
+      ab.textContent = 'この回しにくさで適用する';
+      refreshPanels();
+    };
+  }
   const rb = $('mccResetBtn');
-  if (rb) rb.onclick = () => { resetMccCosts(); buildMccPanel(); refreshPanels(); };
+  if (rb) rb.onclick = () => { if (!askConfirm()) return; resetMccCosts(); buildMccPanel(); refreshPanels(); };
 }
 
 // 型ボーナスの設定（組み込みの値・有効無効＋自分の型）。端末に保存する（あっぱー発案 2026-11-15）
@@ -1648,7 +1667,7 @@ function buildPatPanel() {
     savePatSettings(); buildPatPanel(); refreshPanels();
   };
   const prb = $('patResetBtn');
-  if (prb) prb.onclick = () => { resetPatternSettings(); savePatSettings(); buildPatPanel(); refreshPanels(); };
+  if (prb) prb.onclick = () => { if (!askConfirm()) return; resetPatternSettings(); savePatSettings(); buildPatPanel(); refreshPanels(); };
 }
 
 function doSearch(explicitWin) {
