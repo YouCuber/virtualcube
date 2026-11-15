@@ -170,6 +170,7 @@
         </div>
         <div class="row"><button id="patAddBtn">型を追加</button></div>
         <div class="row"><button id="patResetBtn">型の設定を全部標準に戻す</button></div>
+        <div class="row"><button id="advCloseBtn">アドバンスド設定を閉じる</button></div>
       </div>
       <button id="searchBtn" class="big">解を探す</button>
       <button id="cancelBtn" style="display:none">中断</button>
@@ -1876,6 +1877,8 @@ window.addEventListener('DOMContentLoaded', () => {
   buildMccPanel();
   buildPatPanel();
   $('advBtn').onclick = () => { const p = $('advPanel'); p.style.display = p.style.display === 'none' ? '' : 'none'; };
+  const acb = $('advCloseBtn');
+  if (acb) acb.onclick = () => { $('advPanel').style.display = 'none'; $('advBtn').scrollIntoView({ behavior: 'smooth', block: 'center' }); };
   $('searchBtn').onclick = () => doSearch();
   $('cancelBtn').onclick = () => { if (activeRun) activeRun.cancel(); };
   $('capRange').oninput = () => {
