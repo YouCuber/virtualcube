@@ -3,15 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ピアノ傾斜テスト（-45°再現）</title>
+<title>ピアノ傾斜テスト（実測フィット版）</title>
 <style>
   body { background:#0b0e1d; color:#e8eaf6; font-family:sans-serif; margin:0; padding:12px; text-align:center; }
   h1 { font-size:17px; margin:4px 0 10px; }
   #stage { position:relative; width:min(92vw, 430px); aspect-ratio:9/16; margin:0 auto; background:#000;
            overflow:hidden; border-radius:10px; border:1px solid #2c3560; }
+  .layer { position:absolute; inset:0; }
   #persp { position:absolute; inset:0; }
-  #tilt { position:absolute; left:0; width:100%; height:100%; transform-origin:50% 50%; will-change:transform; }
+  #tilt { position:absolute; left:0; top:0; width:100%; height:100%; transform-origin:50% 50%; will-change:transform; }
   canvas { width:100%; height:100%; display:block; }
+  #guide { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
   #controls { max-width:430px; margin:12px auto 0; text-align:left; font-size:14px; }
   .crow { display:flex; align-items:center; gap:8px; margin:7px 0; }
   .crow label { flex:0 0 8.5em; }
@@ -22,111 +24,127 @@
 </style>
 </head>
 <body>
-<h1>ピアノ傾斜テスト（AviUtl レシピ再現）</h1>
+<h1>ピアノ傾斜テスト（実測フィット版）</h1>
 <div id="stage">
-  <div id="persp">
-    <div id="tilt"><canvas id="flat" width="1080" height="1920"></canvas></div>
-  </div>
+  <canvas id="notesCv" class="layer" width="1080" height="1920"></canvas>
+  <div id="persp"><div id="tilt"><canvas id="kbCv" width="1080" height="1920"></canvas></div></div>
+  <svg id="guide" viewBox="0 0 1080 1920" preserveAspectRatio="none" style="display:none">
+    <polygon points="185,1182 894,1182 1030,1617 49,1617" fill="none" stroke="#ff5252" stroke-width="4"/>
+    <rect x="185" y="10" width="709" height="1172" fill="none" stroke="#40c4ff" stroke-width="4"/>
+  </svg>
 </div>
 <div id="controls">
-  <div class="crow"><label>パース（カメラ距離）</label><input type="range" id="perspR" min="300" max="3000" step="10" value="1100"><span class="val" id="perspV"></span></div>
+  <div class="crow"><label>パース（カメラ距離）</label><input type="range" id="perspR" min="150" max="3000" step="5" value="363"><span class="val" id="perspV"></span></div>
   <div class="crow"><label>回転X</label><input type="range" id="rotR" min="0" max="70" step="0.5" value="45"><span class="val" id="rotV"></span></div>
-  <div class="crow"><label>拡大率</label><input type="range" id="scaleR" min="30" max="110" step="0.5" value="60"><span class="val" id="scaleV"></span></div>
-  <div class="crow"><label>Y位置</label><input type="range" id="yR" min="-300" max="500" step="5" value="60"><span class="val" id="yV"></span></div>
+  <div class="crow"><label>拡大率（横）</label><input type="range" id="scaleR" min="30" max="110" step="0.5" value="61.2"><span class="val" id="scaleV"></span></div>
+  <div class="crow"><label>拡大率（縦）</label><input type="range" id="scaleYR" min="30" max="110" step="0.5" value="54.6"><span class="val" id="scaleYV"></span></div>
+  <div class="crow"><label>Y位置</label><input type="range" id="yR" min="-300" max="500" step="2" value="58"><span class="val" id="yV"></span></div>
+  <div class="crow"><label>ガイド表示</label><input type="checkbox" id="guideChk" checked><span></span></div>
   <div class="crow"><label>平面で見る</label><input type="checkbox" id="flatChk"><span></span></div>
-  <div class="crow"><button id="resetBtn">レシピ初期値に戻す</button></div>
+  <div class="crow"><button id="resetBtn">実測フィット値に戻す</button></div>
 </div>
-<p class="note">平面の落下ノート＋鍵盤に、AviUtl のレシピ（回転X 45°（AviUtl の −45° は Web では符号が逆で +45°）、拡大率 約60%＝70.05%×軸別約86%、Y位置ずらし）をかけた試作だよ。パース（カメラ距離）だけはプロジェクトに残っていない未知数だから、動画のフレームと見比べてここを合わせるのが目的。Y位置の初期値は表示サイズに合わせて 60 にしてある（元レシピは 1920 に対して +130）。</p>
+<p class="note">動画フレーム（1080×1920）から測ったキーボードの四隅に、計算で合わせた版。赤い台形＝実測のキーボード位置、青い四角＝実測のノート領域。キーボードが赤い台形にぴったり重なるはず。ノート領域は実測で「傾いていない」ことが分かったので、平面のまま描いている（傾いているのはキーボードだけ）。パース等の初期値はフレーム座標での計算値（パース 912、Y +145）を、表示サイズに換算したもの。</p>
 <script>
-const cv = document.getElementById('flat'), cx = cv.getContext('2d');
-const W = 1080, H = 1920, KB_H = 430, KB_Y = H - KB_H;
-// 白鍵15個 (C4..C6) と黒鍵
-const WHITE_NAMES = ['ド','レ','ミ','ファ','ソ','ラ','シ'];
-const whites = []; // {x, w, name, num}
-const blacks = []; // {x, w, num}
-{
-  const ww = W / 15;
-  let num = 1;
-  for (let i = 0; i < 15; i++) {
-    whites.push({ x: i * ww, w: ww, name: WHITE_NAMES[i % 7], num: num++ });
-    const semi = [0,1,3,4,5][0]; // dummy
-    const hasBlack = [0,1,3,4,5].includes(i % 7); // ド レ ファ ソ ラ の右に黒鍵
-    if (hasBlack && i < 14) blacks.push({ x: (i + 1) * ww - ww * 0.30, w: ww * 0.60, num: num++ });
-  }
-}
-const lanes = [];
-for (const k of whites) lanes.push({ x: k.x, w: k.w, black: false });
-for (const k of blacks) lanes.push({ x: k.x, w: k.w, black: true });
-lanes.sort((a, b) => a.x - b.x);
+// ===== ノート領域（平面）: フレーム座標 x 185..894, y 10..1182 =====
+const ncv = document.getElementById('notesCv'), nx = ncv.getContext('2d');
+const NZ = { x: 185, y: 10, w: 709, h: 1172 };
+const NW = 15, ww = NZ.w / NW;
+const lanesX = [];
+for (let i = 0; i < NW; i++) lanesX.push({ x: NZ.x + i * ww, w: ww, black: false });
+const hasBlack = i => [0, 1, 3, 4, 5].includes(i % 7);
+for (let i = 0; i < NW - 1; i++) if (hasBlack(i)) lanesX.push({ x: NZ.x + (i + 1) * ww - ww * 0.30, w: ww * 0.60, black: true });
 const COLORS = ['#66bb6a', '#42a5f5', '#ab47bc', '#ffa726'];
 const notes = [];
 let last = 0, spawnT = 0;
-function spawn(t) {
-  const lane = lanes[Math.floor(Math.random() * lanes.length)];
-  notes.push({ lane, y: -260 - Math.random() * 200, len: 180 + Math.random() * 420, v: 430 + Math.random() * 120, c: COLORS[Math.floor(Math.random() * COLORS.length)] });
-}
-function draw(t) {
+function drawNotes(t) {
   const dt = Math.min(0.05, (t - last) / 1000 || 0); last = t;
-  spawnT -= dt; if (spawnT <= 0) { spawn(t); spawnT = 0.35 + Math.random() * 0.5; }
-  cx.fillStyle = '#101736'; cx.fillRect(0, 0, W, H);
-  // レーンの境目
-  cx.strokeStyle = 'rgba(255,255,255,0.07)'; cx.lineWidth = 2;
-  for (const k of whites) { cx.beginPath(); cx.moveTo(k.x, 0); cx.lineTo(k.x, KB_Y); cx.stroke(); }
-  // ノート
+  spawnT -= dt;
+  if (spawnT <= 0) {
+    const lane = lanesX[Math.floor(Math.random() * lanesX.length)];
+    notes.push({ lane, y: NZ.y - 200, len: 150 + Math.random() * 380, v: 400 + Math.random() * 120, c: COLORS[Math.floor(Math.random() * COLORS.length)] });
+    spawnT = 0.35 + Math.random() * 0.5;
+  }
+  nx.clearRect(0, 0, 1080, 1920);
+  nx.fillStyle = '#101736'; nx.fillRect(NZ.x, NZ.y, NZ.w, NZ.h);
+  nx.strokeStyle = 'rgba(255,255,255,0.08)'; nx.lineWidth = 2;
+  for (let i = 0; i <= NW; i++) { nx.beginPath(); nx.moveTo(NZ.x + i * ww, NZ.y); nx.lineTo(NZ.x + i * ww, NZ.y + NZ.h); nx.stroke(); }
   for (let i = notes.length - 1; i >= 0; i--) {
     const n = notes[i]; n.y += n.v * dt;
-    if (n.y - n.len > KB_Y) { notes.splice(i, 1); continue; }
-    const yTop = Math.max(0, n.y - n.len), yBot = Math.min(KB_Y, n.y);
-    if (yBot > yTop) {
-      cx.fillStyle = n.c;
-      const x = n.lane.x + 4, w = n.lane.w - 8;
-      cx.beginPath(); cx.roundRect(x, yTop, w, yBot - yTop, 14); cx.fill();
-      if (n.y >= KB_Y - 2 && n.y <= KB_Y + 30) { // 鍵盤に届いたら光る
-        cx.fillStyle = 'rgba(255,235,150,0.55)';
-        cx.fillRect(n.lane.x, KB_Y, n.lane.w, KB_H);
-      }
-    }
+    const yBot = n.y, yTop = n.y - n.len;
+    if (yTop > NZ.y + NZ.h) { notes.splice(i, 1); continue; }
+    nx.fillStyle = n.c;
+    nx.beginPath(); nx.roundRect(n.lane.x + 3, Math.max(NZ.y, yTop), n.lane.w - 6, Math.min(NZ.y + NZ.h, yBot) - Math.max(NZ.y, yTop), 12); nx.fill();
   }
-  // 白鍵
-  for (const k of whites) {
-    cx.fillStyle = '#f5f5f5'; cx.fillRect(k.x + 1, KB_Y, k.w - 2, KB_H);
-    cx.fillStyle = '#222'; cx.font = 'bold 44px sans-serif'; cx.textAlign = 'center';
-    cx.fillText(k.name, k.x + k.w / 2, KB_Y + KB_H - 92);
-    cx.font = 'bold 40px sans-serif';
-    cx.fillText(String(k.num), k.x + k.w / 2, KB_Y + KB_H - 34);
-  }
-  // 黒鍵
-  for (const k of blacks) {
-    cx.fillStyle = '#151515'; cx.fillRect(k.x, KB_Y, k.w, KB_H * 0.62);
-    cx.fillStyle = '#fff'; cx.font = 'bold 34px sans-serif'; cx.textAlign = 'center';
-    cx.fillText(String(k.num), k.x + k.w / 2, KB_Y + KB_H * 0.62 - 22);
-  }
-  requestAnimationFrame(draw);
+  // 判定線（赤）
+  nx.fillStyle = '#c62828'; nx.fillRect(NZ.x, NZ.y + NZ.h - 6, NZ.w, 6);
+  requestAnimationFrame(drawNotes);
 }
-requestAnimationFrame(draw);
+requestAnimationFrame(drawNotes);
 
-// ---- 傾斜コントロール ----
+// ===== キーボード（平面 1080×1920 の中に y 1120..1730 で描き、層ごと傾ける） =====
+const kcv = document.getElementById('kbCv'), kx = kcv.getContext('2d');
+const KB = { top: 1120, whiteH: 610, blackH: 400 };
+{
+  const kw = 1080 / NW;
+  const NAMES = ['ド','レ','ミ','ファ','ソ','ラ','シ'];
+  let num = 1; const nums = [];
+  for (let i = 0; i < NW; i++) { nums.push(num++); if (hasBlack(i) && i < NW - 1) num++; }
+  for (let i = 0; i < NW; i++) {
+    kx.fillStyle = '#fffdf0'; kx.fillRect(i * kw + 1, KB.top, kw - 2, KB.whiteH);
+    kx.fillStyle = '#222'; kx.textAlign = 'center';
+    kx.font = 'bold 46px sans-serif';
+    kx.fillText(NAMES[i % 7], i * kw + kw / 2, KB.top + KB.whiteH - 100);
+    kx.font = 'bold 42px sans-serif';
+    kx.fillText(String(nums[i]), i * kw + kw / 2, KB.top + KB.whiteH - 38);
+  }
+  let bnum = 0;
+  for (let i = 0; i < NW - 1; i++) {
+    // 黒鍵の番号は白鍵の採番と連動（nums の次の番号）
+    if (!hasBlack(i)) continue;
+    bnum = nums[i] + 1;
+    const bx = (i + 1) * kw - kw * 0.30;
+    kx.fillStyle = '#151515'; kx.fillRect(bx, KB.top, kw * 0.60, KB.blackH);
+    kx.fillStyle = '#fff'; kx.font = 'bold 36px sans-serif'; kx.textAlign = 'center';
+    kx.fillText(String(bnum), bx + kw * 0.30, KB.top + KB.blackH - 24);
+  }
+}
+
+// ===== 傾斜コントロール（値は表示px。初期値はフレーム座標の計算値を表示倍率で換算） =====
+const stage = document.getElementById('stage');
 const perspEl = document.getElementById('persp'), tiltEl = document.getElementById('tilt');
 const R = id => document.getElementById(id);
+function factor() { return stage.clientWidth / 1080; }
 function apply() {
-  const p = +R('perspR').value, rot = +R('rotR').value, sc = +R('scaleR').value, y = +R('yR').value;
-  R('perspV').textContent = p + 'px';
+  const p = +R('perspR').value, rot = +R('rotR').value, sc = +R('scaleR').value, scy = +R('scaleYR').value, y = +R('yR').value;
+  const f = factor();
+  R('perspV').textContent = Math.round(p / f) + '';
   R('rotV').textContent = rot + '°';
   R('scaleV').textContent = sc + '%';
-  R('yV').textContent = y + 'px';
+  R('scaleYV').textContent = scy + '%';
+  R('yV').textContent = Math.round(y / f) + '';
+  document.getElementById('guide').style.display = R('guideChk').checked ? 'block' : 'none';
   if (R('flatChk').checked) {
     perspEl.style.perspective = 'none';
     tiltEl.style.transform = 'none';
   } else {
     perspEl.style.perspective = p + 'px';
-    tiltEl.style.transform = 'translateY(' + y + 'px) rotateX(' + rot + 'deg) scale(' + (sc / 100) + ')';
+    tiltEl.style.transform = 'translateY(' + y + 'px) rotateX(' + rot + 'deg) scale(' + (sc / 100) + ',' + (scy / 100) + ')';
   }
 }
-for (const id of ['perspR', 'rotR', 'scaleR', 'yR', 'flatChk']) R(id).addEventListener('input', apply);
-R('resetBtn').onclick = () => {
-  R('perspR').value = 1100; R('rotR').value = 45; R('scaleR').value = 60; R('yR').value = 60; R('flatChk').checked = false; apply();
-};
-apply();
+function setFit() {
+  const f = factor();
+  R('perspR').value = Math.round(912 * f);
+  R('rotR').value = 45;
+  R('scaleR').value = 61.2;
+  R('scaleYR').value = 54.6;
+  R('yR').value = Math.round(145 * f);
+  R('flatChk').checked = false;
+  apply();
+}
+for (const id of ['perspR', 'rotR', 'scaleR', 'scaleYR', 'yR', 'flatChk', 'guideChk']) R(id).addEventListener('input', apply);
+R('resetBtn').onclick = setFit;
+window.addEventListener('resize', setFit);
+setFit();
 </script>
 </body>
 </html>
