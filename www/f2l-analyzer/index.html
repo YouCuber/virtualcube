@@ -53,7 +53,8 @@
   .mccRow .mf { width:16px; font-weight:700; }
   .mccRow .mh { flex:1; text-align:center; color:#9aa5d6; }
   .mccRow .mv { width:36px; text-align:right; }
-  .mccRow input[type=range] { flex:1; }
+  .mccRow input[type=range] { flex:1; min-width:0; }
+  .patRow .pn { min-width:0; }
   .patRow { display:flex; align-items:center; gap:6px; font-size:13px; margin:4px 0; flex-wrap:wrap; }
   .patRow .pn { flex:1 1 9em; }
   .patRow .pa { color:#9aa5d6; font-size:12px; order:5; flex-basis:100%; padding-left:26px; }
@@ -113,7 +114,7 @@
       <h3 id="setupTop">セットアップ</h3>
       <div class="groupName">1. クロス面（下にする面）</div>
       <div id="crossRow" class="row"></div>
-      <div class="groupName">2. 対象スロットと、他のスロットの保持／空き（右のパネルで指定）</div>
+      <div class="groupName">2. 対象スロットと、他のスロットの保持／空き（右のパネルで指定、スマホでは下）</div>
       <div class="groupName">3. ペアを置く</div>
       <div id="pairPalette" class="row"></div>
       <div class="row"><button id="setupBtn">セットアップをやり直す（クロスと保持スロットを埋めて、他は黒に）</button></div>
