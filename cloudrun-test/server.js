@@ -7,6 +7,9 @@ const nKeys = Object.keys(db).length;
 
 const server = http.createServer((req, res) => {
   const u = new URL(req.url, 'http://x');
+  // CORS: GitHub Pagesのページから問い合わせを受けられるようにする（体感速度テスト用）
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  if (req.method === 'OPTIONS') { res.writeHead(204); return res.end(); }
   if (u.pathname === '/health') {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
     return res.end('ok');
