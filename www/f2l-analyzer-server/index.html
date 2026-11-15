@@ -1239,7 +1239,7 @@ function setAuthMsg(t) { const el = $('authMsg'); if (el) el.textContent = t || 
 function applyAuthLock() {
   if (!MEMBERS) return;
   const btn = $('searchBtn');
-  if (btn) btn.disabled = !AUTH_OK;
+  if (btn) { btn.disabled = !AUTH_OK; btn.style.cursor = AUTH_OK ? '' : 'not-allowed'; }
 }
 function initMembersAuth() {
   if (!MEMBERS) return;
