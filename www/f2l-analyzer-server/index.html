@@ -13,8 +13,13 @@
   .sub { color:#9aa5d6; margin:0 0 12px; }
   .cols { display:flex; gap:16px; flex-wrap:wrap; align-items:flex-start; }
   .panel { background:#121836; border-radius:14px; padding:14px; }
-  .grow { flex:1 1 480px; }
-  .side { flex:1 1 360px; }
+  .grow { flex:1 1 480px; min-width:0; }
+  .side { flex:1 1 360px; min-width:0; }
+  @media (max-width:600px) {
+    .net { justify-content:flex-start; overflow-x:auto; }
+    .faceGrid { grid-template-columns:repeat(3, 28px); }
+    .sticker { width:28px; height:28px; }
+  }
   .memo { margin-top:16px; }
   .memo li { margin:4px 0; color:#c5cae9; }
   .status { font-weight:bold; margin-bottom:10px; color:#ffab91; }
