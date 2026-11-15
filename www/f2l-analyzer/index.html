@@ -1538,9 +1538,11 @@ function doSearch(explicitWin) {
     };
     if (dbHit) dbHit.toksList.forEach(pushToks);
     const jobs = [];
-    if (dbHit) { for (let L = minLen; L <= maxLen; L++) jobs.push({ minLen: L, maxLen: L, label: L }); } // DBの候補は最初から表示し、窓の全長は常時実検索して混ぜる
+    const belowSkipped = []; // 最短未満で実検索を省いた長さ
+    if (dbHit) { for (let L = minLen; L <= maxLen; L++) { if (!wideOn && L < dbHit.depth) { belowSkipped.push(L); continue; } jobs.push({ minLen: L, maxLen: L, label: L }); } } // DBの候補は最初から表示し、窓の長さは実検索して混ぜる。ただし最短未満の長さは解が無いとDBで確定しているので探さない（wide/スライス使用時は短くなる可能性があるので探す）
     else jobs.push({ minLen, maxLen, label: null });
     let depth = (dbHit && dbTrust) ? dbHit.depth : -1;
+    const knownDepth = depth > 0 ? depth : (dbHit && !wideOn ? dbHit.depth : -1); // 回転を絞っていても、最短の下限としてのDBの深さは使える
     let cancelled = false;
     let curLabel = null;
     let curNodes = 0;
@@ -1600,7 +1602,7 @@ function doSearch(explicitWin) {
       }
       let note, warn;
       if (dbHit) {
-        note = '最短 ' + depth + ' 手（' + minLen + '〜' + maxLen + ' 手の解を収集） の候補 ' + scored.length + ' 件（回しやすい順） ※DBの候補に全長さの実検索を混ぜて表示';
+        note = '最短 ' + depth + ' 手（' + minLen + '〜' + maxLen + ' 手の解を収集） の候補 ' + scored.length + ' 件（回しやすい順）' + (belowSkipped.length ? ' ※DBの候補に実検索を混ぜて表示（' + belowSkipped.join('・') + '手は最短未満のため実検索なし）' : ' ※DBの候補に全長さの実検索を混ぜて表示');
         if (cappedLens.length) warn = ' ※' + cappedLens.join('・') + '手は探索上限（' + capText(maxNodes) + '）で打ち切りのため未確認';
       } else {
         note = '最短 ' + depth + ' 手（' + minLen + '〜' + maxLen + ' 手の解を収集） の候補 ' + scored.length + ' 件（回しやすい順）' + (scored.length > 30 ? ' ※表示は上位30件' : '');
@@ -1654,10 +1656,10 @@ function doSearch(explicitWin) {
       );
     };
     if (!jobs.length) {
-      if (!scored.length) setInfo('', depth > 0
-        ? '最短は ' + depth + ' 手で、指定した長さ（' + minLen + '〜' + maxLen + ' 手）では解けないよ。基準を上げてみて'
+      if (!scored.length) setInfo('', knownDepth > 0
+        ? '最短は ' + knownDepth + ' 手で、指定した長さ（' + minLen + '〜' + maxLen + ' 手）では解けないよ。基準を上げてみて'
         : '今の設定では解が無いよ。使う回転やスロット設定を見直してみて');
-      else renderNow('最短 ' + depth + ' 手（' + minLen + '〜' + maxLen + ' 手の解を収集） の候補 ' + scored.length + ' 件（回しやすい順） ※事前計算DBから表示');
+      else renderNow('最短 ' + knownDepth + ' 手（' + minLen + '〜' + maxLen + ' 手の解を収集） の候補 ' + scored.length + ' 件（回しやすい順） ※事前計算DBから表示');
       showDoneBanner('検索終了');
       finishUI(); activeRun = null; return;
     }
