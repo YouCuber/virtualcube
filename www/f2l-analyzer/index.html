@@ -54,10 +54,11 @@
   .mccRow .mh { flex:1; text-align:center; color:#9aa5d6; }
   .mccRow .mv { width:36px; text-align:right; }
   .mccRow input[type=range] { flex:1; }
-  .patRow { display:flex; align-items:center; gap:6px; font-size:13px; margin:2px 0; }
-  .patRow .pn { flex:1; }
-  .patRow .pa { color:#9aa5d6; font-size:12px; }
-  .patRow input[type=number] { width:64px; }
+  .patRow { display:flex; align-items:center; gap:6px; font-size:13px; margin:4px 0; flex-wrap:wrap; }
+  .patRow .pn { flex:1 1 9em; }
+  .patRow .pa { color:#9aa5d6; font-size:12px; order:5; flex-basis:100%; padding-left:26px; }
+  .patRow input[type=number] { width:64px; flex:none; }
+  .patRow input[type=checkbox] { flex:none; }
   .rank { color:#ffd54a; font-weight:700; font-size:14px; margin-right:8px; }
   .pos { color:#9aa5d6; font-size:13px; }
   #searchInfo { margin-top:10px; color:#c5cae9; }
