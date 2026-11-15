@@ -30,13 +30,13 @@
 </div>
 <div id="controls">
   <div class="crow"><label>パース（カメラ距離）</label><input type="range" id="perspR" min="300" max="3000" step="10" value="1100"><span class="val" id="perspV"></span></div>
-  <div class="crow"><label>回転X</label><input type="range" id="rotR" min="-70" max="0" step="0.5" value="-45"><span class="val" id="rotV"></span></div>
+  <div class="crow"><label>回転X</label><input type="range" id="rotR" min="0" max="70" step="0.5" value="45"><span class="val" id="rotV"></span></div>
   <div class="crow"><label>拡大率</label><input type="range" id="scaleR" min="30" max="110" step="0.5" value="60"><span class="val" id="scaleV"></span></div>
   <div class="crow"><label>Y位置</label><input type="range" id="yR" min="-300" max="500" step="5" value="60"><span class="val" id="yV"></span></div>
   <div class="crow"><label>平面で見る</label><input type="checkbox" id="flatChk"><span></span></div>
   <div class="crow"><button id="resetBtn">レシピ初期値に戻す</button></div>
 </div>
-<p class="note">平面の落下ノート＋鍵盤に、AviUtl のレシピ（回転X −45°、拡大率 約60%＝70.05%×軸別約86%、Y位置ずらし）をかけた試作だよ。パース（カメラ距離）だけはプロジェクトに残っていない未知数だから、動画のフレームと見比べてここを合わせるのが目的。Y位置の初期値は表示サイズに合わせて 60 にしてある（元レシピは 1920 に対して +130）。</p>
+<p class="note">平面の落下ノート＋鍵盤に、AviUtl のレシピ（回転X 45°（AviUtl の −45° は Web では符号が逆で +45°）、拡大率 約60%＝70.05%×軸別約86%、Y位置ずらし）をかけた試作だよ。パース（カメラ距離）だけはプロジェクトに残っていない未知数だから、動画のフレームと見比べてここを合わせるのが目的。Y位置の初期値は表示サイズに合わせて 60 にしてある（元レシピは 1920 に対して +130）。</p>
 <script>
 const cv = document.getElementById('flat'), cx = cv.getContext('2d');
 const W = 1080, H = 1920, KB_H = 430, KB_Y = H - KB_H;
@@ -124,7 +124,7 @@ function apply() {
 }
 for (const id of ['perspR', 'rotR', 'scaleR', 'yR', 'flatChk']) R(id).addEventListener('input', apply);
 R('resetBtn').onclick = () => {
-  R('perspR').value = 1100; R('rotR').value = -45; R('scaleR').value = 60; R('yR').value = 60; R('flatChk').checked = false; apply();
+  R('perspR').value = 1100; R('rotR').value = 45; R('scaleR').value = 60; R('yR').value = 60; R('flatChk').checked = false; apply();
 };
 apply();
 </script>
