@@ -50,9 +50,10 @@ const ncv = document.getElementById('notesCv'), nx = ncv.getContext('2d');
 const NZ = { x: 185, y: 10, w: 709, h: 1172 };
 const NW = 15, ww = NZ.w / NW;
 const lanesX = [];
-for (let i = 0; i < NW; i++) lanesX.push({ x: NZ.x + i * ww, w: ww, black: false });
+for (let i = 0; i < NW; i++) lanesX.push({ x: NZ.x + i * ww, w: ww, black: false, key: 'w' + i });
 const hasBlack = i => [0, 1, 3, 4, 5].includes(i % 7);
-for (let i = 0; i < NW - 1; i++) if (hasBlack(i)) lanesX.push({ x: NZ.x + (i + 1) * ww - ww * 0.30, w: ww * 0.60, black: true });
+for (let i = 0; i < NW - 1; i++) if (hasBlack(i)) lanesX.push({ x: NZ.x + (i + 1) * ww - ww * 0.30, w: ww * 0.60, black: true, key: 'b' + i });
+const activeKeys = new Set();
 const COLORS = ['#66bb6a', '#42a5f5', '#ab47bc', '#ffa726'];
 const notes = [];
 let last = 0, spawnT = 0;
@@ -68,10 +69,13 @@ function drawNotes(t) {
   nx.fillStyle = '#101736'; nx.fillRect(NZ.x, NZ.y, NZ.w, NZ.h);
   nx.strokeStyle = 'rgba(255,255,255,0.08)'; nx.lineWidth = 2;
   for (let i = 0; i <= NW; i++) { nx.beginPath(); nx.moveTo(NZ.x + i * ww, NZ.y); nx.lineTo(NZ.x + i * ww, NZ.y + NZ.h); nx.stroke(); }
+  activeKeys.clear();
+  const lineY = NZ.y + NZ.h;
   for (let i = notes.length - 1; i >= 0; i--) {
     const n = notes[i]; n.y += n.v * dt;
     const yBot = n.y, yTop = n.y - n.len;
     if (yTop > NZ.y + NZ.h) { notes.splice(i, 1); continue; }
+    if (yTop <= lineY && yBot >= lineY) activeKeys.add(n.lane.key); // 判定線をまたいでいる間、その鍵盤が光る
     nx.fillStyle = n.c;
     nx.beginPath(); nx.roundRect(n.lane.x + 3, Math.max(NZ.y, yTop), n.lane.w - 6, Math.min(NZ.y + NZ.h, yBot) - Math.max(NZ.y, yTop), 12); nx.fill();
   }
@@ -84,30 +88,32 @@ requestAnimationFrame(drawNotes);
 // ===== キーボード（平面 1080×1920 の中に y 1120..1730 で描き、層ごと傾ける） =====
 const kcv = document.getElementById('kbCv'), kx = kcv.getContext('2d');
 const KB = { top: 1120, whiteH: 610, blackH: 400 };
-{
-  const kw = 1080 / NW;
-  const NAMES = ['ド','レ','ミ','ファ','ソ','ラ','シ'];
-  let num = 1; const nums = [];
-  for (let i = 0; i < NW; i++) { nums.push(num++); if (hasBlack(i) && i < NW - 1) num++; }
+const kw = 1080 / NW;
+const NAMES = ['ド','レ','ミ','ファ','ソ','ラ','シ'];
+const nums = [];
+{ let num = 1; for (let i = 0; i < NW; i++) { nums.push(num++); if (hasBlack(i) && i < NW - 1) num++; } }
+function drawKb() {
+  kx.clearRect(0, 0, 1080, 1920);
   for (let i = 0; i < NW; i++) {
-    kx.fillStyle = '#fffdf0'; kx.fillRect(i * kw + 1, KB.top, kw - 2, KB.whiteH);
+    const on = activeKeys.has('w' + i);
+    kx.fillStyle = on ? '#8ae234' : '#fffdf0'; kx.fillRect(i * kw + 1, KB.top, kw - 2, KB.whiteH);
     kx.fillStyle = '#222'; kx.textAlign = 'center';
     kx.font = 'bold 46px sans-serif';
     kx.fillText(NAMES[i % 7], i * kw + kw / 2, KB.top + KB.whiteH - 100);
     kx.font = 'bold 42px sans-serif';
     kx.fillText(String(nums[i]), i * kw + kw / 2, KB.top + KB.whiteH - 38);
   }
-  let bnum = 0;
   for (let i = 0; i < NW - 1; i++) {
-    // 黒鍵の番号は白鍵の採番と連動（nums の次の番号）
     if (!hasBlack(i)) continue;
-    bnum = nums[i] + 1;
+    const on = activeKeys.has('b' + i);
     const bx = (i + 1) * kw - kw * 0.30;
-    kx.fillStyle = '#151515'; kx.fillRect(bx, KB.top, kw * 0.60, KB.blackH);
+    kx.fillStyle = on ? '#4e9a06' : '#151515'; kx.fillRect(bx, KB.top, kw * 0.60, KB.blackH);
     kx.fillStyle = '#fff'; kx.font = 'bold 36px sans-serif'; kx.textAlign = 'center';
-    kx.fillText(String(bnum), bx + kw * 0.30, KB.top + KB.blackH - 24);
+    kx.fillText(String(nums[i] + 1), bx + kw * 0.30, KB.top + KB.blackH - 24);
   }
+  requestAnimationFrame(drawKb);
 }
+requestAnimationFrame(drawKb);
 
 // ===== 傾斜コントロール（値は表示px。初期値はフレーム座標の計算値を表示倍率で換算） =====
 const stage = document.getElementById('stage');
