@@ -48,6 +48,9 @@
   .pat-sune { background:#4a1f6d; }
   .pat-trigger { background:#1f6d3a; }
   .meta { color:#9aa5d6; font-size:13px; margin-top:3px; }
+  .rankline { margin-bottom:1px; }
+  .rank { color:#ffd54a; font-weight:700; font-size:14px; margin-right:8px; }
+  .pos { color:#9aa5d6; font-size:13px; }
   #searchInfo { margin-top:10px; color:#c5cae9; }
   .capwarn { color:#ff5252; font-weight:700; }
   .doneBanner { margin-top:10px; padding:10px; border-radius:8px; background:#1b5e20; color:#fff; font-size:20px; font-weight:800; text-align:center; letter-spacing:0.2em; }
@@ -826,6 +829,37 @@ function findPair() {
   };
 }
 
+// ---------- センター基準の読み（表示の枠用、2026-11-15 あっぱー決定） ----------
+// 白枠（ペア）と黄色い枠（対象スロット）は、ソルバー（DB・模範解答）と同じく
+// 「今のセンター並び」で読む。決まった配色で読むと、y など持ち替えで終わる
+// セットアップのあと、枠が「実際に解かれるペア・場所」とずれてしまう。
+// センターが黒くて読めないときは null を返し、呼び出し側が従来の読みに倒す。
+const FACE_OF_PAINT = ['U', 'R', 'F', 'D', 'L', 'B']; // 基準配色でその色を担う面
+function rawOfPaint(c) { return cur[CENTER_SLOT[FACE_OF_PAINT[c]]]; }
+function centeredPairPos() {
+  const t = SLOTS[target];
+  const cSet = t.cornerPaints.map(rawOfPaint), eSet = t.edgePaints.map(rawOfPaint);
+  if (cSet.some(p => p < 0) || eSet.some(p => p < 0)) return null;
+  const key = a => a.slice().sort().join();
+  let cPos = -1, ePos = -1;
+  CORNER_POS.forEach((pos, i) => { const ps = CINFO[i].map(e => cur[e.slot]); if (ps.every(p => p >= 0) && key(ps) === key(cSet)) cPos = i; });
+  EDGE_POS.forEach((pos, i) => { const ps = EDGE_INFO[i].map(e => cur[e.slot]); if (ps.every(p => p >= 0) && key(ps) === key(eSet)) ePos = i; });
+  if (cPos < 0 || ePos < 0) return null;
+  return { cPos, ePos };
+}
+function centeredSlotName() {
+  const want = SLOTS[target].cornerPaints.map(rawOfPaint);
+  if (want.some(p => p < 0)) return null;
+  const key = a => a.slice().sort().join();
+  const facesOf = pos => pos.map((v, a) => v !== 0 ? DIR_FACE[vkey(unitVec(a, v))] : null).filter(Boolean);
+  for (const name of SLOT_NAMES) {
+    const paints = facesOf(SLOTS[name].corner).map(f => cur[CENTER_SLOT[f]]);
+    if (paints.some(p => p < 0)) return null;
+    if (key(paints) === key(want)) return name;
+  }
+  return null;
+}
+
 // ---------- セットアップ（土台作り） ----------
 function orientationWithDown(paint) {
   // 完成状態を回して、指定ペイントのセンターが下(D)に来る向きを探す（前面は緑を優先）
@@ -964,15 +998,21 @@ function slotStickerIdx(slotName) {
   return idx;
 }
 function render() {
-  const targetIdx = new Set(slotStickerIdx(target));
+  const targetIdx = new Set(slotStickerIdx(centeredSlotName() || target));
   const openIdx = new Set();
   for (const name of SLOT_NAMES) {
     if (name !== target && !preserve.has(name)) for (const i of slotStickerIdx(name)) openIdx.add(i);
   }
   const pair = findPair();
   const pairSlots = new Set();
-  if (pair.corner) for (const e of CINFO[pair.corner.pos]) pairSlots.add(e.slot);
-  if (pair.edge) for (const e of EDGE_INFO[pair.edge.pos]) pairSlots.add(e.slot);
+  const cpos = centeredPairPos();
+  if (cpos) {
+    for (const e of CINFO[cpos.cPos]) pairSlots.add(e.slot);
+    for (const e of EDGE_INFO[cpos.ePos]) pairSlots.add(e.slot);
+  } else {
+    if (pair.corner) for (const e of CINFO[pair.corner.pos]) pairSlots.add(e.slot);
+    if (pair.edge) for (const e of EDGE_INFO[pair.edge.pos]) pairSlots.add(e.slot);
+  }
   for (let i = 0; i < 54; i++) {
     const d = stickerDivs[i];
     if (!d) continue;
@@ -1306,16 +1346,21 @@ function setInfo(main, warn) {
 function renderScored(scored, infoText, warnText) {
   setInfo(infoText, warnText);
   const host = $('results');
-  for (const r of scored.slice(0, 30)) {
+  let prevScore = null, prevRank = 0;
+  scored.slice(0, 30).forEach((r, i) => {
+    // MCC安さ順位（同点は同じ順位、次の順位は飛ばす: 1,1,3,4）と、通し番号（30件の上限のどこか）の両方を出す
+    const rank = (prevScore !== null && Math.abs(r.mcc.score - prevScore) < 1e-9) ? prevRank : i + 1;
+    prevScore = r.mcc.score; prevRank = rank;
     const div = document.createElement('div');
     div.className = 'result';
     const tags = [...new Set(r.mcc.segs.map(s => s.name))].join(' / ');
-    div.innerHTML = '<div class="alg">' + highlightedHTML(r.toks, r.mcc.segs) + '</div>' +
+    div.innerHTML = '<div class="rankline"><span class="rank">' + rank + '位</span><span class="pos">#' + (i + 1) + '</span></div>' +
+      '<div class="alg">' + highlightedHTML(r.toks, r.mcc.segs) + '</div>' +
       '<div class="meta">HTM ' + r.met.htm + ' ／ MCC ' + r.mcc.score.toFixed(2) +
       (r.mcc.bonus > 0 ? '（型ボーナス −' + r.mcc.bonus.toFixed(1) + '）' : '') +
       (tags ? ' ／ 型: ' + tags : '') + '</div>';
     host.appendChild(div);
-  }
+  });
 }
 
 function updWindow() {
